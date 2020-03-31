@@ -1,12 +1,19 @@
+export function interpolate(arr: number[], t: number) {
+  t = (t % arr.length + arr.length) % arr.length
+  const ti = Math.floor(t)
+  t -= ti
+  return arr[ti % arr.length] * (1 - t) + t * arr[(ti + 1) % arr.length]
+}
+
 export class Random {
   y: number
-  constructor(seed = 0x7fffffff * Math.random()) {
-    this.y = Math.floor(seed) || 1
+  constructor(seed?: number) {
+    this.y = Math.floor(seed || 0) || Math.floor(1 + 0x7fffffff * Math.random())
   }
   next() {
     return this.y = (48271 * this.y) % 0x7fffffff
   }
-  int(n) {
+  int(n: number) {
     return this.next() % n
   }
   float() {
