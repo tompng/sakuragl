@@ -2,7 +2,7 @@ import { Scene, PerspectiveCamera, WebGLRenderer } from 'three'
 import { BoxGeometry, MeshPhongMaterial, MeshBasicMaterial, Mesh } from 'three'
 import { BufferGeometry, BufferAttribute } from 'three'
 import { AmbientLight, DirectionalLight } from 'three'
-import { Random } from './random'
+import { Random } from './util'
 
 
 const scene = new Scene()
