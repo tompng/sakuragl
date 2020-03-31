@@ -1,4 +1,4 @@
-import { Random, interpolate } from './util'
+import { Random, interpolate, cross, normalize } from './util'
 
 type BranchProps = {
   r1: number
@@ -24,7 +24,7 @@ export class Branch {
     this.seriesX = rand.smooth(128)
     this.seriesY = rand.smooth(128)
   }
-  centerAt(t: number) {
+  centerAt(t: number): [number, number] {
     const { rscale, seriesX, seriesY } = this
     const scale = rscale * (t < 0 || t > 1 ? 0 : 16 * (t * (1 - t)) ** 2)
     return [
@@ -32,53 +32,71 @@ export class Branch {
       scale * (interpolate(seriesY, t * seriesY.length) - seriesY[0])
     ]
   }
-  generateVertices(rLevel: number, zLevel: number) {
+  generateCoords(rLevel: number, zLevel: number): [number[], number[]] {
     const vertices: number[] = []
+    const normals: number[] = []
     const { r1, r2, length } = this
-    const add = (ta: number, tb: number, ra: number, rb: number) => {
-      const [xa, ya] = this.centerAt(ta)
-      const [xb, yb] = this.centerAt(tb)
-      for (let i = 0; i < rLevel; i++) {
-        const th1 = 2 * Math.PI * i / rLevel
-        const th2 = 2 * Math.PI * (i + 1) / rLevel
-        const c1 = Math.cos(th1), s1 = Math.sin(th1)
-        const c2 = Math.cos(th2), s2 = Math.sin(th2)
-        if (ra) vertices.push(
-          xa + ra * c1, ya + ra * s1, length * ta,
-          xa + ra * c2, ya + ra * s2, length * ta,
-          xb + rb * c1, yb + rb * s1, length * tb
-        )
-        if (rb) vertices.push(
-          xa + ra * c2, ya + ra * s2, length * ta,
-          xb + rb * c2, yb + rb * s2, length * tb,
-          xb + rb * c1, yb + rb * s1, length * tb
-        )
-      }
-    }
-    
     const n1 = Math.ceil(zLevel * r1 / length)
     const n2 = Math.ceil(zLevel * r2 / length)
-    for (let j = 0; j < n1; j++) {
-      const ua = j / n1
-      const ub = (j + 1) / n1
-      const ra = r1 * Math.sqrt(1 - ua * ua)
-      const rb = r1 * Math.sqrt(1 - ub * ub)
-      add(-ub * r1 / length, -ua * r1 / length, rb, ra)
+    const zs: [number, number, number, number][] = []
+    for (let j = n1; j > 0; j--) {
+      const t = j / n1
+      const r = r1 * Math.sqrt(1 - t * t)
+      zs.push([0, 0, -t * r1, r])
     }
-    for (let j = 0; j < zLevel; j++) {
-      const ta = j / zLevel
-      const tb = (j + 1) / zLevel
-      const ra = r1 + (r2 - r1) * ta
-      const rb = r1 + (r2 - r1) * tb
-      add(ta, tb, ra, rb)
+    for (let j = 0; j <= zLevel; j++) {
+      const t = j / zLevel
+      const [x, y] = this.centerAt(t)
+      zs.push([x, y, length * t, r1 + (r2 - r1) * t])
     }
-    for (let j = 0; j < n2; j++) {
-      const ua = j / n2
-      const ub = (j + 1) / n2
-      const ra = r2 * Math.sqrt(1 - ua * ua)
-      const rb = r2 * Math.sqrt(1 - ub * ub)
-      add(1 + ua * r2 / length, 1 + ub * r2 / length, ra, rb)
+    for (let j = 1; j <= n2; j++) {
+      const t = j / n2
+      const r = r2 * Math.sqrt(1 - t * t)
+      zs.push([0, 0, length + t * r2, r])
     }
-    return vertices
+    const vs: [number, number][] = []
+    for (let i = 0; i < rLevel; i++) {
+      const th = 2 * Math.PI * i / rLevel
+      vs.push([Math.cos(th), Math.sin(th)])
+    }
+    type Ring = [number, number, number, number, number, number][]
+    let ring: Ring | null = null
+    zs.forEach(([x, y, z, r], zidx) => {
+      const prev = ring
+      if (r === 0) {
+        ring = [[x, y, z, 0, 0, zidx ? +1 : -1]]
+      } else {
+        ring = vs.map(([cos, sin]) => {
+          const [xp, yp, zp, rp] = zs[zidx - 1] || zs[zidx]
+          const [xn, yn, zn, rn] = zs[zidx + 1] || zs[zidx]
+          const [nx, ny, nz] = normalize(cross(
+            [-sin, cos, 0],
+            [
+              (xn - xp) + (rn - rp) * cos,
+              (yn - yp) + (rn - rp) * sin,
+              zn - zp
+            ]
+          ))
+          return [x + r * cos, y + r * sin, z, nx, ny, nz]
+        })
+      }
+      if (!prev) return
+      for (let i = 0; i < rLevel; i++) {
+        const [x0, y0, z0, nx0, ny0, nz0] = prev[i % prev.length]
+        const [x1, y1, z1, nx1, ny1, nz1] = prev[(i + 1) % prev.length]
+        const [x2, y2, z2, nx2, ny2, nz2] = ring[i % ring.length]
+        const [x3, y3, z3, nx3, ny3, nz3] = ring[(i + 1) % ring.length]
+        if (prev.length !== 1) {
+          vertices.push(x0, y0, z0, x1, y1, z1, x2, y2, z2)
+          normals.push(nx0, ny0, nz0, nx1, ny1, nz1, nx2, ny2, nz2)
+        }
+        if (ring.length !== 1) {
+          vertices.push(x1, y1, z1, x3, y3, z3, x2, y2, z2)
+          normals.push(nx1, ny1, nz1, nx3, ny3, nz3, nx2, ny2, nz2)
+        }
+      }
+    })
+    if (r2 === 0)(window as any).foo = zs
+    return [vertices, normals]
   }
 }

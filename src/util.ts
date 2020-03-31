@@ -1,3 +1,18 @@
+type N3 = [number, number, number]
+
+export function cross([x1, y1, z1]: N3, [x2, y2, z2]: N3): N3 {
+  return [
+    y1 * z2 - y2 * z1,
+    z1 * x2 - z2 * x1,
+    x1 * y2 - x2 * y1
+  ]
+}
+
+export function normalize([x, y, z]: N3): N3 {
+  const r = Math.sqrt(x * x + y * y + z * z)
+  return [x / r, y / r, z / r]
+}
+
 export function interpolate(arr: number[], t: number) {
   t = (t % arr.length + arr.length) % arr.length
   const ti = Math.floor(t)

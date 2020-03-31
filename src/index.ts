@@ -18,7 +18,7 @@ for (let i = 0; i < 5; i++) {
   const branch = new Branch({ r1: 0.04 * (i + 1), r2: 0.04 * i, rscale: 0.02/(1+0.1 * i), length: 1, seed: 1 + i})
   const lod = new LOD()
   ;[[128, 256], [96, 192], [64, 128], [48, 96], [32, 64], [24, 48], [16, 32], [12, 24], [8, 16], [6, 12], [4, 8], [3, 6]].forEach(([rlevel, zlevel], level) => {
-    const mesh = new Mesh(genGeometry(branch.generateVertices(rlevel, zlevel)), material)
+    const mesh = new Mesh(genGeometry(branch.generateCoords(rlevel, zlevel)), material)
     lod.addLevel(mesh, level)
   })
   lods.push(lod.clone())
@@ -42,10 +42,11 @@ camera.position.z = 2
 camera.position.y = 0.5
 renderer.setSize(800, 600)
 
-function genGeometry(vertices: number[]) {
+function genGeometry([vertices, normals]: [number[], number[]]) {
   const geom = new BufferGeometry()
   geom.setAttribute('position', new BufferAttribute(new Float32Array(vertices), 3))
-  geom.computeVertexNormals()
+  geom.setAttribute('normal', new BufferAttribute(new Float32Array(normals), 3))
+  // geom.computeVertexNormals()
   return geom
 }
 
