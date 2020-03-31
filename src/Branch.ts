@@ -27,9 +27,10 @@ export class Branch {
   }
   centerAt(t: number) {
     const { rscale, seriesX, seriesY } = this
+    const scale = rscale * (t < 0 || t > 1 ? 0 : 16 * (t * (1 - t)) ** 2)
     return [
-      rscale * (interpolate(seriesX, t * seriesX.length) - seriesX[0]),
-      rscale * (interpolate(seriesY, t * seriesY.length) - seriesY[0])
+      scale * (interpolate(seriesX, t * seriesX.length) - seriesX[0]),
+      scale * (interpolate(seriesY, t * seriesY.length) - seriesY[0])
     ]
   }
   generateVertices(rLevel: number, zLevel: number) {
@@ -56,19 +57,20 @@ export class Branch {
       }
       const n1 = Math.ceil(zLevel * r1 / length)
       const n2 = Math.ceil(zLevel * r2 / length)
+      const a = 1
       for (let j = 0; j < n1; j++) {
         const ua = j / n1
         const ub = (j + 1) / n1
         const ra = r1 * Math.sqrt(1 - ua * ua)
         const rb = r1 * Math.sqrt(1 - ub * ub)
-        add(-ub * r1 / length, -ua * r1 / length, rb, ra)
+        add(-a * ub * r1 / length, -a * ua * r1 / length, rb, ra)
       }
       for (let j = 0; j < n2; j++) {
         const ua = j / n2
         const ub = (j + 1) / n2
         const ra = r2 * Math.sqrt(1 - ua * ua)
         const rb = r2 * Math.sqrt(1 - ub * ub)
-        add(1 + ua * r1 / length, 1 + ub * r1 / length, ra, rb)
+        add(1 + a * ua * r2 / length, 1 + a * ub * r2 / length, ra, rb)
       }
       for (let j = 0; j < zLevel; j++) {
         const ta = j / zLevel
