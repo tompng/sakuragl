@@ -1,6 +1,5 @@
 import { Random, interpolate } from './util'
 
-
 type BranchProps = {
   r1: number
   r2: number
@@ -36,14 +35,14 @@ export class Branch {
   generateVertices(rLevel: number, zLevel: number) {
     const vertices: number[] = []
     const { r1, r2, length } = this
-    for (let i = 0; i < rLevel; i++) {
-      const th1 = 2 * Math.PI * i / rLevel
-      const th2 = 2 * Math.PI * (i + 1) / rLevel
-      const c1 = Math.cos(th1), s1 = Math.sin(th1)
-      const c2 = Math.cos(th2), s2 = Math.sin(th2)
-      const add = (ta: number, tb: number, ra: number, rb: number) => {
-        const [xa, ya] = this.centerAt(ta)
-        const [xb, yb] = this.centerAt(tb)
+    const add = (ta: number, tb: number, ra: number, rb: number) => {
+      const [xa, ya] = this.centerAt(ta)
+      const [xb, yb] = this.centerAt(tb)
+      for (let i = 0; i < rLevel; i++) {
+        const th1 = 2 * Math.PI * i / rLevel
+        const th2 = 2 * Math.PI * (i + 1) / rLevel
+        const c1 = Math.cos(th1), s1 = Math.sin(th1)
+        const c2 = Math.cos(th2), s2 = Math.sin(th2)
         if (ra) vertices.push(
           xa + ra * c1, ya + ra * s1, length * ta,
           xa + ra * c2, ya + ra * s2, length * ta,
@@ -55,30 +54,30 @@ export class Branch {
           xb + rb * c1, yb + rb * s1, length * tb
         )
       }
-      const n1 = Math.ceil(zLevel * r1 / length)
-      const n2 = Math.ceil(zLevel * r2 / length)
-      const a = 1
-      for (let j = 0; j < n1; j++) {
-        const ua = j / n1
-        const ub = (j + 1) / n1
-        const ra = r1 * Math.sqrt(1 - ua * ua)
-        const rb = r1 * Math.sqrt(1 - ub * ub)
-        add(-a * ub * r1 / length, -a * ua * r1 / length, rb, ra)
-      }
-      for (let j = 0; j < n2; j++) {
-        const ua = j / n2
-        const ub = (j + 1) / n2
-        const ra = r2 * Math.sqrt(1 - ua * ua)
-        const rb = r2 * Math.sqrt(1 - ub * ub)
-        add(1 + a * ua * r2 / length, 1 + a * ub * r2 / length, ra, rb)
-      }
-      for (let j = 0; j < zLevel; j++) {
-        const ta = j / zLevel
-        const tb = (j + 1) / zLevel
-        const ra = r1 + (r2 - r1) * ta
-        const rb = r1 + (r2 - r1) * tb
-        add(ta, tb, ra, rb)
-      }
+    }
+    
+    const n1 = Math.ceil(zLevel * r1 / length)
+    const n2 = Math.ceil(zLevel * r2 / length)
+    for (let j = 0; j < n1; j++) {
+      const ua = j / n1
+      const ub = (j + 1) / n1
+      const ra = r1 * Math.sqrt(1 - ua * ua)
+      const rb = r1 * Math.sqrt(1 - ub * ub)
+      add(-ub * r1 / length, -ua * r1 / length, rb, ra)
+    }
+    for (let j = 0; j < zLevel; j++) {
+      const ta = j / zLevel
+      const tb = (j + 1) / zLevel
+      const ra = r1 + (r2 - r1) * ta
+      const rb = r1 + (r2 - r1) * tb
+      add(ta, tb, ra, rb)
+    }
+    for (let j = 0; j < n2; j++) {
+      const ua = j / n2
+      const ub = (j + 1) / n2
+      const ra = r2 * Math.sqrt(1 - ua * ua)
+      const rb = r2 * Math.sqrt(1 - ub * ub)
+      add(1 + ua * r2 / length, 1 + ub * r2 / length, ra, rb)
     }
     return vertices
   }
