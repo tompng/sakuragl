@@ -38,8 +38,8 @@ export class Random {
     return this.next() / 0x7fffffff
   }
   smooth(n: number, e0 = 0.9) {
-    const base = []
-    const out = []
+    const base: number[] = []
+    const out: number[] = []
     for (let i = 0; i < n; i++) {
       base[i] = this.float()
       out[i] = 0
