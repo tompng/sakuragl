@@ -1,20 +1,11 @@
-import { Scene, PerspectiveCamera, WebGLRenderer, Vector3 } from 'three'
+import { Scene, Vector3 } from 'three'
 import { MeshPhongMaterial, Mesh, LOD } from 'three'
 import { BufferGeometry, BufferAttribute } from 'three'
-import { AmbientLight, DirectionalLight } from 'three'
 import { Branch } from './Branch'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { normalize, cross } from './util'
-export function start() {
-  const scene = new Scene()
-  const camera = new PerspectiveCamera(75, 4 / 3, 0.1, 1000)
-  const renderer = new WebGLRenderer()
-  const material = new MeshPhongMaterial({ color: 0xffffff })
-  const light = new DirectionalLight(0xffffaa, 1)
-  const alight = new AmbientLight(0x202040, 1)
-  scene.add(light, alight)
-
+export function start(scene: Scene) {
   const lods: LOD[] = []
+  const material = new MeshPhongMaterial({ color: 0xffffff })
   function lengthOf(i: number) {
     return 0.5 + 0.1 * i
   }
@@ -59,23 +50,10 @@ export function start() {
   }
   constructTree(0, 0, 0, 0, 0, 1, 11)
 
-
-  camera.position.z = 2
-  camera.position.y = 0.5
-  renderer.setSize(800, 600)
-
   function genGeometry([vertices, normals]: [number[], number[]]) {
     const geom = new BufferGeometry()
     geom.setAttribute('position', new BufferAttribute(new Float32Array(vertices), 3))
     geom.setAttribute('normal', new BufferAttribute(new Float32Array(normals), 3))
     return geom
   }
-
-  function animate() {
-    requestAnimationFrame(animate)
-    renderer.render(scene, camera)
-  }
-  new OrbitControls(camera, renderer.domElement)
-  document.body.appendChild(renderer.domElement)
-  animate()
 }
