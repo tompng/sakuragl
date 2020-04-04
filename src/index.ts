@@ -1,7 +1,8 @@
 import { Scene, PerspectiveCamera, WebGLRenderer, Vector3 } from 'three'
 import { AmbientLight, DirectionalLight } from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import { start } from './branchTest'
+//import { start } from './branchTest'
+import { start, update } from './Points'
 
 const scene = new Scene()
 const camera = new PerspectiveCamera(75, 4 / 3, 0.1, 1000)
@@ -15,6 +16,7 @@ camera.position.y = 0.5
 renderer.setSize(800, 600)
 
 function animate() {
+  update()
   requestAnimationFrame(animate)
   renderer.render(scene, camera)
 }
@@ -22,5 +24,4 @@ onload = () => {
   start(scene)
   document.body.appendChild(renderer.domElement)
   animate()
-  // update()
 }
