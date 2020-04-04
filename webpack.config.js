@@ -10,6 +10,10 @@ module.exports = {
       {
         test: /\.ts$/,
         use: 'ts-loader'
+      },
+      {
+        test: /\.(frag|vert)$/,
+        use: 'raw-loader'
       }
     ]
   },
