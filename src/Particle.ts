@@ -9,10 +9,10 @@ import {
 
 
 import { loadFileSync } from './loadFileSync'
-const vertexShader = loadFileSync('src/points.vert')
-const fragmentShader = loadFileSync('src/points.frag')
+const vertexShader = loadFileSync('src/shaders/points.vert')
+const fragmentShader = loadFileSync('src/shaders/points.frag')
 
-export class SakuraPoints {
+export class PointParticle {
   size: number
   particles: Points
   shader: ShaderMaterial
@@ -59,7 +59,8 @@ function particleGeometry(size: number) {
   geometry.setAttribute('offset', new BufferAttribute(new Float32Array(offsets), 1))
   return geometry
 }
-const sakura = new SakuraPoints(65536)
+
+const sakura = new PointParticle(65536)
 export function start(scene: Scene) {
   sakura.particles.position.x = -0.5
   sakura.particles.position.y = -0.5
