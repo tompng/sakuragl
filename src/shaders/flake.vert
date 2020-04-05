@@ -2,7 +2,7 @@ uniform float time;
 attribute vec3 center, random;
 attribute float offset;
 varying float col;
-varying float dist;
+varying vec2 coord;
 
 vec3 rotate(vec3 v, vec3 axis, float th) {
   axis = normalize(axis);
@@ -18,5 +18,6 @@ void main(){
   vec3 p = center + 0.01 * pos + vec3(0, 0, 1) * t + 0.01 * sin(6.28 * random.yzx + (vec3(8) + 12.0 * random) * t);
   vec4 cpos = modelViewMatrix * vec4(p, 1);
   col = (0.5 / cpos.z / cpos.z) * t * (1.0 - t);
+  coord = position.xy + vec2(1, 0);
   gl_Position = projectionMatrix * cpos;
 }

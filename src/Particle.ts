@@ -8,7 +8,7 @@ import {
   AdditiveBlending
 } from 'three'
 import * as THREE from 'three'
-import { sakuraOutline } from './sakura'
+import { sakuraOutline, sakuraOutlineTriangles, sakuraTriangles } from './sakura'
 import { loadFileSync } from './loadFileSync'
 const pointsVertexShader = loadFileSync('src/shaders/points.vert')
 const pointsFragmentShader = loadFileSync('src/shaders/points.frag')
@@ -84,7 +84,8 @@ export class FlakeParticle {
     this.shader.needsUpdate = true
   }
   static generateGeometry(size: number, level: number) {
-    const outline = sakuraOutline(level)
+    // const triangles = sakuraOutlineTriangles(level)
+    const triangles = sakuraTriangles(3, 5, 12)
     const positions: number[] = []
     const centers: number[] = []
     const randoms: number[] = []
@@ -94,11 +95,14 @@ export class FlakeParticle {
       const center = [Math.random(), Math.random(), Math.random()]
       const random = [Math.random(), Math.random(), Math.random()]
       const offset = Math.random()
-      const { x: x0, y: y0 } = outline[0]
-      for (let i = 1; i < outline.length - 1; i++) {
-        const { x: x1, y: y1 } = outline[i]
-        const { x: x2, y: y2 } = outline[i + 1]
-        positions.push(x0, y0, 0, x1, y1, 0, x2, y2, 0)
+      const cx = 2 * Math.random() - 1
+      const cy = 2 * Math.random() - 1
+      const cc = 2 * Math.PI * Math.random()
+      const fz = ({ x, y }: { x: number, y: number }) => {
+        return 0.1 * Math.sin(4 * (cx * x + cy * y) + cc)
+      }
+      for (const [a, b, c] of triangles) {
+        positions.push(a.x, a.y, fz(a), b.x, b.y, fz(b), c.x, c.y, fz(c))
         for (let j = 0; j < 3; j++) {
           centers.push(...center)
           randoms.push(...random)
@@ -115,7 +119,7 @@ export class FlakeParticle {
 }
 
 const sakura = new PointParticle(65536)
-const sakura2 = new FlakeParticle(4096, 6)
+const sakura2 = new FlakeParticle(8192, 8)
 export function start(scene: Scene) {
   sakura.mesh.position.x = -0.5
   sakura.mesh.position.y = -0.5
@@ -123,7 +127,7 @@ export function start(scene: Scene) {
   sakura2.mesh.position.x = -0.5
   sakura2.mesh.position.y = -0.5
   sakura2.mesh.position.z = -0.5
-  scene.add(sakura.mesh)
+  // scene.add(sakura.mesh)
   scene.add(sakura2.mesh)
 }
 export function update() {
