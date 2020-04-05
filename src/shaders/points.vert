@@ -2,7 +2,6 @@ uniform float time;
 attribute vec3 random;
 attribute float offset;
 varying float col;
-varying float dist;
 void main(){
   float t = mod(time + offset, 1.0);
   vec3 p = position + vec3(0, 0, 1) * t + 0.01 * sin(6.28 * random.yzx + (vec3(8) + 12.0 * random) * t);
