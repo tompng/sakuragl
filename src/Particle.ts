@@ -268,10 +268,16 @@ class SakuraParticle {
     const triangles1 = sakuraOutlineTriangles(5)
     const triangles2 = sakuraTriangles(3, 5, 12)
     const triangles3 = sakuraTriangles(6, 10, 24)
+    const t0geom = new Map<ParticleAttributes, BufferGeometry>()
     const t1geom = new Map<ParticleAttributes, BufferGeometry>()
     const t2geom = new Map<ParticleAttributes, BufferGeometry>()
     const t3geom = new Map<ParticleAttributes, BufferGeometry>()
     this.smallGeometryBoxes = [
+      mapBox(smallBoxAttributes, attrs => {
+        let g = t0geom.get(attrs)
+        if (!g) t0geom.set(attrs, g = generateFlakeGeometry(attrs, triangles0, 1))
+        return g
+      }),
       mapBox(smallBoxAttributes, attrs => {
         let g = t1geom.get(attrs)
         if (!g) t1geom.set(attrs, g = generateFlakeGeometry(attrs, triangles1, 1))
@@ -315,8 +321,8 @@ class SakuraParticle {
     }
     const threshold0 = 0.5
     const threshold1 = 1
-    const threshold2 = 2
-    const threshold3 = 4.2
+    const threshold2 = 2.5
+    const threshold3 = 4
     const wind = time + 0.5 * (Math.sin(0.0133 * time + 1) + Math.sin(0.0173 * time + 2))
     let baseX = 0.1 * wind + 0.02 * (Math.sin(0.0113 * time + 3) + Math.sin(0.0181 * time + 4))
     let baseY = 0.2 * wind + 0.02 * (Math.sin(0.0143 * time + 5) + Math.sin(0.0163 * time + 6))
@@ -328,7 +334,7 @@ class SakuraParticle {
     baseZ += Math.round((cz - baseZ - baseSize / 2) / baseSize) * baseSize
     const distance = ({ x, y, z }: Point3D, size: number) => {
       const r = Math.sqrt((x + size / 2 - cx) ** 2 + (y + size / 2 - cy) ** 2 + (z + size / 2 - cz) ** 2)
-      const dr = size * Math.sqrt(3) / 2
+      const dr = size * Math.sqrt(3) / 2 + 0.14
       return { min: r - dr, max: r + dr }
     }
 
@@ -348,10 +354,12 @@ class SakuraParticle {
     const setSmall = (position: Point3D, i: number, j: number, k: number) => {
       const { min } = distance(position, 1)
       if (min < threshold0) {
-        prepareMesh(this.smallGeometryBoxes[2][i][j][k], position)
+        prepareMesh(this.smallGeometryBoxes[3][i][j][k], position)
       } else if (min < threshold1) {
+        prepareMesh(this.smallGeometryBoxes[2][i][j][k], position)
+      } else if (min < threshold2) {
         prepareMesh(this.smallGeometryBoxes[1][i][j][k], position)
-      } else if (min < threshold2){
+      } else if (min < threshold3) {
         prepareMesh(this.smallGeometryBoxes[0][i][j][k], position)
       }
     }
