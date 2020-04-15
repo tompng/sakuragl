@@ -8,7 +8,7 @@ import {
   AdditiveBlending
 } from 'three'
 import * as THREE from 'three'
-import { sakuraOutline, sakuraOutlineTriangles, sakuraTriangles } from './sakura'
+import { Point2D, Triangle2D, sakuraOutlineTriangles, sakuraTriangles } from './sakura'
 import pointsVertexShader from './shaders/points.vert'
 import pointsFragmentShader from './shaders/points.frag'
 import flakeVertexShader from './shaders/flake.vert'
@@ -122,8 +122,8 @@ export class FlakeParticle {
   mesh: Mesh
   uniforms = { time: { value: 0 } }
   shader: ShaderMaterial
-  constructor(attrs: ParticleAttributes, level: number) {
-    const geometry = FlakeParticle.generateGeometry(attrs, level)
+  constructor(attrs: ParticleAttributes, triangles: Triangle2D[]) {
+    const geometry = FlakeParticle.generateGeometry(attrs, triangles)
     this.shader = flakeShader(this.uniforms)
     this.mesh = new Mesh(geometry, this.shader)
   }
@@ -131,10 +131,9 @@ export class FlakeParticle {
     this.uniforms.time.value = 0.05 * performance.now() / 1000
     this.shader.needsUpdate = true
   }
-  static generateGeometry(attrs: ParticleAttributes, level: number) {
-    // const triangles = sakuraOutlineTriangles(level)
-    const triangles = sakuraTriangles(3, 5, 12)
+  static generateGeometry(attrs: ParticleAttributes, triangles: Triangle2D[]) {
     const positions: number[] = []
+    const normals: number[] = []
     const centers: number[] = []
     const freq1s: number[] = []
     const freq2s: number[] = []
@@ -146,14 +145,31 @@ export class FlakeParticle {
     const nrand2s: number[] = []
     const geometry = new BufferGeometry()
     for (let i = 0; i < attrs.size; i++) {
-      const cx = 2 * Math.random() - 1
-      const cy = 2 * Math.random() - 1
-      const cc = 2 * Math.PI * Math.random()
-      const fz = ({ x, y }: { x: number, y: number }) => {
-        return 0.1 * Math.sin(4 * (cx * x + cy * y) + cc)
+      const cx1 = 2 * Math.random() - 1
+      const cy1 = 2 * Math.random() - 1
+      const cx2 = 2 * Math.random() - 1
+      const cy2 = 2 * Math.random() - 1
+      const cc1 = 2 * Math.PI * Math.random()
+      const cc2 = 2 * Math.PI * Math.random()
+      const fz = ({ x, y }: Point2D) => {
+        return 0.2 * (
+          + Math.sin(2 * (cx1 * x + cy1 * y) + cc1)
+          + Math.sin(2 * (cx2 * x + cy2 * y) + cc2)
+          - Math.sin(cc1)
+          - Math.sin(cc2)
+        )
+      }
+      const normal = ({ x, y }: Point2D) => {
+        const c1 = Math.cos(2 * (cx1 * x + cy1 * y) + cc1)
+        const c2 = Math.cos(2 * (cx2 * x + cy2 * y) + cc2)
+        const zdx = 0.4 * (cx1 * c1 + cx2 * c2)
+        const zdy = 0.4 * (cy1 * c1 + cy2 * c2)
+        const r = Math.sqrt(1 + zdx ** 2 + zdy ** 2)
+        return [-zdx / r, -zdy / r, 1 / r] as const
       }
       for (const [a, b, c] of triangles) {
         positions.push(a.x, a.y, fz(a), b.x, b.y, fz(b), c.x, c.y, fz(c))
+        normals.push(...normal(a), ...normal(b), ...normal(c))
         for (let j = 0; j < 3; j++) {
           centers.push(...attrs.center[i])
           freq1s.push(...attrs.freq1[i])
@@ -168,6 +184,7 @@ export class FlakeParticle {
       }
     }
     geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
+    geometry.setAttribute('normal', new BufferAttribute(new Float32Array(normals), 3))
     geometry.setAttribute('center', new BufferAttribute(new Float32Array(centers), 3))
     geometry.setAttribute('freq1', new BufferAttribute(new Float32Array(freq1s), 3))
     geometry.setAttribute('freq2', new BufferAttribute(new Float32Array(freq2s), 3))
@@ -181,9 +198,11 @@ export class FlakeParticle {
   }
 }
 
-const particleAttributes = generateParticleAttributes(819)
+const outlineTriangles = sakuraOutlineTriangles(5)
+const triangles = sakuraTriangles(3, 5, 12)
+const particleAttributes = generateParticleAttributes(512)
 const sakura = new PointParticle(65536)
-const sakura2 = new FlakeParticle(particleAttributes, 8)
+const sakura2 = new FlakeParticle(particleAttributes, triangles)
 export function start(scene: Scene) {
   sakura.mesh.position.x = -0.5
   sakura.mesh.position.y = -0.5

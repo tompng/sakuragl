@@ -1,6 +1,6 @@
-type Point2D = { x: number; y: number }
-type Polar2D = { r: number ;th: number }
-type Triangle = [Point2D, Point2D, Point2D]
+export type Point2D = { x: number; y: number }
+export type Polar2D = { r: number ;th: number }
+export type Triangle2D = [Point2D, Point2D, Point2D]
 export function sakuraRadius(th: number) {
   return 0.5 + th / 4 - 1 / 4 / (4 * th + 1) ** 4 + Math.cos(2 * th) / 10
 }
@@ -32,18 +32,18 @@ export function sakuraOutline(n: number): Point2D[] {
   return coords
 }
 
-export function sakuraOutlineTriangles(n: number): Triangle[] {
+export function sakuraOutlineTriangles(n: number): Triangle2D[] {
   const outline = sakuraOutline(n)
-  const triangles: Triangle[] = []
+  const triangles: Triangle2D[] = []
   for (let i = 1; i < outline.length - 1; i++) {
     triangles.push([outline[0], outline[i], outline[i + 1]])
   }
   return triangles
 }
 
-export function sakuraTriangles(nRadial: number, nInner: number, nOuter: number = nInner): Triangle[] {
+export function sakuraTriangles(nRadial: number, nInner: number, nOuter: number = nInner): Triangle2D[] {
   const coords: Point2D[] = sakuraOutline(nOuter)
-  const triangles: Triangle[] = []
+  const triangles: Triangle2D[] = []
   let outer = coords
   for (let i = nRadial - 1; i >= 0; i--) {
     let n = Math.ceil(i * nInner / nRadial) * 2
