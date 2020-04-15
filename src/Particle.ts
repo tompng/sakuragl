@@ -155,7 +155,7 @@ export class FlakeParticle {
       const cc2 = 2 * Math.PI * Math.random()
       const cv = 0.4 * Math.random()
       const fz = ({ x, y }: Point2D) => {
-        return 0.04 * (
+        return 0.08 * (
           + Math.sin(4 * (cx1 * x + cy1 * y) + cc1)
           + Math.sin(4 * (cx2 * x + cy2 * y) + cc2)
           - Math.sin(cc1)
@@ -165,8 +165,8 @@ export class FlakeParticle {
       const normal = ({ x, y }: Point2D) => {
         const c1 = Math.cos(4 * (cx1 * x + cy1 * y) + cc1)
         const c2 = Math.cos(4 * (cx2 * x + cy2 * y) + cc2)
-        const zdx = 0.16 * (cx1 * c1 + cx2 * c2) + cv * (4 * x ** 3 + 2 * y ** 2 * x)
-        const zdy = 0.16 * (cy1 * c1 + cy2 * c2) + cv * (4 * y ** 3 + 2 * x ** 2 * y)
+        const zdx = 0.32 * (cx1 * c1 + cx2 * c2) + cv * (4 * x ** 3 + 2 * y ** 2 * x)
+        const zdy = 0.32 * (cy1 * c1 + cy2 * c2) + cv * (4 * y ** 3 + 2 * x ** 2 * y)
         const r = Math.sqrt(1 + zdx ** 2 + zdy ** 2)
         return [-zdx / r, -zdy / r, 1 / r] as const
       }
