@@ -130,7 +130,7 @@ export class FlakeParticle {
     this.mesh = new Mesh(geometry, this.shader)
   }
   update() {
-    this.uniforms.time.value = 0.05 * performance.now() / 1000
+    this.uniforms.time.value = 0.05 * performance.now() / 1000 / 4
     this.shader.needsUpdate = true
   }
   static generateGeometry(attrs: ParticleAttributes, triangles: Triangle2D[]) {
@@ -220,7 +220,6 @@ export function start(scene: Scene) {
   sakura2.mesh.position.z = -0.5
   // scene.add(sakura.mesh)
   scene.add(sakura2.mesh)
-  document.body.appendChild(createSakuraTexture(512))
 }
 export function update() {
   sakura.update()

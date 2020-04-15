@@ -12,7 +12,7 @@ const light = new DirectionalLight(0xffffaa, 1)
 const alight = new AmbientLight(0x202040, 1)
 scene.add(light, alight)
 camera.position.z = 2
-renderer.setSize(800, 600)
+renderer.setSize(800 * 2, 600 * 2)
 
 function animate() {
   update()
@@ -21,6 +21,8 @@ function animate() {
 }
 onload = () => {
   start(scene)
+  renderer.domElement.style.width = '800px'
+  renderer.domElement.style.height = '600px'
   document.body.appendChild(renderer.domElement)
   animate()
 }

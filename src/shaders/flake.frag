@@ -9,7 +9,7 @@ void main() {
   float ndot = gl_FrontFacing ? dot(light, normal) : dot(light, -normal);
   float a = max(
     ndot * 0.4 + 0.6,
-    -ndot * 0.4 + 0.2
+    -ndot * 0.4 + 0.4
   );
   gl_FragColor.rgb *= a * vDecay;
 }
