@@ -118,13 +118,38 @@ function generateParticleAttributes(size: number): ParticleAttributes {
   return { size, center, freq1, freq2, freq3, rand1, rand2, rand3, nrand1, nrand2, nrand3 }
 }
 
+type PositionedParticleAttribute = { attributes: ParticleAttributes, position: { x: number; y: number; z: number } }
+function mergeParticleAttributes(list: PositionedParticleAttribute[]) {
+  const attributes: ParticleAttributes = {
+    size: 0,
+    center: [],
+    freq1: [],
+    freq2: [],
+    freq3: [],
+    rand1: [],
+    rand2: [],
+    rand3: [],
+    nrand1: [],
+    nrand2: [],
+    nrand3: []
+  }
+  list.forEach(({ attributes: attr, position: { x, y, z }}) => {
+    attributes.size += attr.size
+    attr.center.forEach(([cx, cy, cz]) => attributes.center.push([cx + x, cy + y, cz + z]))
+    ;(['freq1', 'freq2', 'freq3', 'rand1', 'rand2', 'rand3', 'nrand1', 'nrand2', 'nrand3'] as const).forEach(name => {
+      attr[name].forEach(v => attributes[name].push(v))
+    })
+  })
+  return attributes
+}
+
+
 
 export class FlakeParticle {
   mesh: Mesh
   uniforms = { time: { value: 0 }, texture: { value: null as null | Texture } }
   shader: ShaderMaterial
-  constructor(attrs: ParticleAttributes, triangles: Triangle2D[], texture: Texture) {
-    const geometry = FlakeParticle.generateGeometry(attrs, triangles)
+  constructor(geometry: BufferGeometry, texture: Texture) {
     this.uniforms.texture.value = texture
     this.shader = flakeShader(this.uniforms)
     this.mesh = new Mesh(geometry, this.shader)
@@ -201,24 +226,96 @@ export class FlakeParticle {
   }
 }
 
-const outlineTriangles = sakuraOutlineTriangles(5)
-const triangles = sakuraTriangles(3 * 2, 5 * 2, 12 * 2)
+const sakura = new PointParticle(65536)
+
+// const triangles = sakuraOutlineTriangles(2)
+const triangles = sakuraTriangles(6, 10, 24)
 const texture = new Texture(createSakuraTexture(512))
 texture.magFilter = THREE.LinearFilter
 texture.minFilter = THREE.LinearFilter
 texture.format = THREE.RGBFormat
 texture.needsUpdate = true
-const particleAttributes = generateParticleAttributes(1024)
-const sakura = new PointParticle(65536)
-const sakura2 = new FlakeParticle(particleAttributes, triangles, texture)
+
+function box<T>(n: number, f: (i: number, j: number, k: number) => T): T[][][] {
+  return [...new Array(n)].map((_, i) =>
+    [...new Array(n)].map((_, j) =>
+      [...new Array(n)].map((_, k) =>
+        f(i, j, k)
+      )
+    )
+  )
+}
+function eachBox(n: number, f: (i: number, j: number, k: number) => void) {
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) for (let k = 0; k < n; k++) f(i, j, k)
+}
+function mapBox<T, U>(box: T[][][], f: (t: T, i: number, j: number, k: number) => U): U[][][] {
+  return box.map((yzs, i) => yzs.map((zs, j) => zs.map((t, k) => f(t, i, j, k))))
+}
+function flatMapBox<T, U>(box: T[][][], f: (t: T, i: number, j: number, k: number) => U): U[] {
+  const result: U[] = []
+  box.forEach((yzs, i) => yzs.forEach((zs, j) => zs.forEach((t, k) => {
+    result.push(f(t, i, j, k))
+  })))
+  return result
+}
+
+class SakuraParticle {
+  smallFlakeBoxes: BufferGeometry[][][][]
+  mediumFlakeBoxes: BufferGeometry[][][][]
+  largeFlakes: BufferGeometry[]
+  uniforms: { time: { value: number }, texture: { value: Texture } }
+  shader: ShaderMaterial
+  constructor(density: number = 256, texture: Texture) {
+    this.uniforms = { time: { value: 0 }, texture: { value: texture } }
+    this.shader = flakeShader(this.uniforms)
+    const smallBoxAttributes = box(4, () => generateParticleAttributes(density))
+    function merge(boxAttrs: ParticleAttributes[][][], i: number, j: number, k: number, size: number) {
+      const list: PositionedParticleAttribute[] = []
+      eachBox(size, (x, y, z) => {
+        list.push({ position: { x, y, z }, attributes: boxAttrs[i + x][j + y][k + z] })
+      })
+      return mergeParticleAttributes(list)
+    }
+    const mediumBoxAttributes = box(2, (i, j, k) => merge(smallBoxAttributes, 2 * i, 2 * j, 2 * k, 2))
+    const largeAttributes = merge(mediumBoxAttributes, 0, 0, 0, 2)
+    const triangles0 = sakuraOutlineTriangles(2)
+    const triangles1 = sakuraOutlineTriangles(5)
+    const triangles2 = sakuraTriangles(3, 5, 12)
+    const triangles3 = sakuraTriangles(6, 10, 24)
+    this.smallFlakeBoxes = [
+      mapBox(smallBoxAttributes, attrs => FlakeParticle.generateGeometry(attrs, triangles0)),
+      mapBox(smallBoxAttributes, attrs => FlakeParticle.generateGeometry(attrs, triangles1)),
+      mapBox(smallBoxAttributes, attrs => FlakeParticle.generateGeometry(attrs, triangles2)),
+      mapBox(smallBoxAttributes, attrs => FlakeParticle.generateGeometry(attrs, triangles3))
+    ]
+    this.mediumFlakeBoxes = [
+      mapBox(mediumBoxAttributes, attrs => FlakeParticle.generateGeometry(attrs, triangles0)),
+      mapBox(mediumBoxAttributes, attrs => FlakeParticle.generateGeometry(attrs, triangles1))
+    ]
+    this.largeFlakes = [
+      FlakeParticle.generateGeometry(largeAttributes, triangles0),
+      FlakeParticle.generateGeometry(largeAttributes, triangles1)
+    ]
+  }
+  attach(scene: Scene) {
+
+  }
+  update(camera: THREE.Camera) {
+    this.uniforms.time.value = 0.05 * performance.now() / 1000 / 4
+    this.shader.needsUpdate = true
+  }
+}
+
+const particleAttributes = generateParticleAttributes(256)
+
+
+const sakuraGeometry = FlakeParticle.generateGeometry(particleAttributes, triangles)
+const sakura2 = new FlakeParticle(sakuraGeometry, texture)
+
 export function start(scene: Scene) {
-  sakura.mesh.position.x = -0.5
-  sakura.mesh.position.y = -0.5
-  sakura.mesh.position.z = -0.5
   sakura2.mesh.position.x = -0.5
   sakura2.mesh.position.y = -0.5
   sakura2.mesh.position.z = -0.5
-  // scene.add(sakura.mesh)
   scene.add(sakura2.mesh)
 }
 export function update() {
