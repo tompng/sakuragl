@@ -148,7 +148,7 @@ function mergeParticleAttributes(list: PositionedParticleAttribute[]) {
 
 
 
-function generateFlakeGeometry(attrs: ParticleAttributes, triangles: Triangle2D[]) {
+function generateFlakeGeometry(attrs: ParticleAttributes, triangles: Triangle2D[], size: number) {
   const positions: number[] = []
   const normals: number[] = []
   const centers: number[] = []
@@ -212,6 +212,7 @@ function generateFlakeGeometry(attrs: ParticleAttributes, triangles: Triangle2D[
   geometry.setAttribute('rand3', new BufferAttribute(new Float32Array(rand3s), 3))
   geometry.setAttribute('nrand1', new BufferAttribute(new Float32Array(nrand1s), 3))
   geometry.setAttribute('nrand2', new BufferAttribute(new Float32Array(nrand2s), 3))
+  geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(size / 2, size / 2, size / 2), size * Math.sqrt(3) / 2 + 0.14)
   return geometry
 }
 
@@ -273,23 +274,23 @@ class SakuraParticle {
     this.smallGeometryBoxes = [
       mapBox(smallBoxAttributes, attrs => {
         let g = t1geom.get(attrs)
-        if (!g) t1geom.set(attrs, g = generateFlakeGeometry(attrs, triangles1))
+        if (!g) t1geom.set(attrs, g = generateFlakeGeometry(attrs, triangles1, 1))
         return g
       }),
       mapBox(smallBoxAttributes, attrs => {
         let g = t2geom.get(attrs)
-        if (!g) t2geom.set(attrs, g = generateFlakeGeometry(attrs, triangles2))
+        if (!g) t2geom.set(attrs, g = generateFlakeGeometry(attrs, triangles2, 1))
         return g
       }),
       mapBox(smallBoxAttributes, attrs => {
         let g = t3geom.get(attrs)
-        if (!g) t3geom.set(attrs, g = generateFlakeGeometry(attrs, triangles3))
+        if (!g) t3geom.set(attrs, g = generateFlakeGeometry(attrs, triangles3, 1))
         return g
       })
     ]
     this.largeGeometryBoxes = [
-      mapBox(largeBoxAttributes, attrs => generateFlakeGeometry(attrs, triangles0)),
-      mapBox(largeBoxAttributes, attrs => generateFlakeGeometry(attrs, triangles1))
+      mapBox(largeBoxAttributes, attrs => generateFlakeGeometry(attrs, triangles0, 2)),
+      mapBox(largeBoxAttributes, attrs => generateFlakeGeometry(attrs, triangles1, 2))
     ]
   }
   update(scene: Scene, camera: Camera) {
@@ -331,8 +332,8 @@ class SakuraParticle {
       return { min: r - dr, max: r + dr }
     }
 
-    const setMedium = (position: Point3D, i: number, j: number, k: number) => {
-      const { min, max } = distance(position, 2)
+    const setLarge = (position: Point3D, i: number, j: number, k: number) => {
+      const { min } = distance(position, 2)
       if (threshold3 < min) return
       if (threshold2 < min) {
         prepareMesh(this.largeGeometryBoxes[0][i][j][k], position)
@@ -355,7 +356,7 @@ class SakuraParticle {
       }
     }
     eachBox(9, (i, j, k) => {
-      setMedium({
+      setLarge({
         x: baseX + (i - 4) * 2,
         y: baseY + (j - 4) * 2,
         z: baseZ + (k - 4) * 2
