@@ -151,19 +151,20 @@ export class FlakeParticle {
       const cy2 = 2 * Math.random() - 1
       const cc1 = 2 * Math.PI * Math.random()
       const cc2 = 2 * Math.PI * Math.random()
+      const cv = 0.4 * Math.random()
       const fz = ({ x, y }: Point2D) => {
-        return 0.2 * (
-          + Math.sin(2 * (cx1 * x + cy1 * y) + cc1)
-          + Math.sin(2 * (cx2 * x + cy2 * y) + cc2)
+        return 0.04 * (
+          + Math.sin(4 * (cx1 * x + cy1 * y) + cc1)
+          + Math.sin(4 * (cx2 * x + cy2 * y) + cc2)
           - Math.sin(cc1)
           - Math.sin(cc2)
-        )
+        ) + cv * (x ** 4 + 2 * x ** 2  * y ** 2+ y ** 4)
       }
       const normal = ({ x, y }: Point2D) => {
-        const c1 = Math.cos(2 * (cx1 * x + cy1 * y) + cc1)
-        const c2 = Math.cos(2 * (cx2 * x + cy2 * y) + cc2)
-        const zdx = 0.4 * (cx1 * c1 + cx2 * c2)
-        const zdy = 0.4 * (cy1 * c1 + cy2 * c2)
+        const c1 = Math.cos(4 * (cx1 * x + cy1 * y) + cc1)
+        const c2 = Math.cos(4 * (cx2 * x + cy2 * y) + cc2)
+        const zdx = 0.16 * (cx1 * c1 + cx2 * c2) + cv * (4 * x ** 3 + 2 * y ** 2 * x)
+        const zdy = 0.16 * (cy1 * c1 + cy2 * c2) + cv * (4 * y ** 3 + 2 * x ** 2 * y)
         const r = Math.sqrt(1 + zdx ** 2 + zdy ** 2)
         return [-zdx / r, -zdy / r, 1 / r] as const
       }
@@ -199,8 +200,8 @@ export class FlakeParticle {
 }
 
 const outlineTriangles = sakuraOutlineTriangles(5)
-const triangles = sakuraTriangles(3, 5, 12)
-const particleAttributes = generateParticleAttributes(512)
+const triangles = sakuraTriangles(3 * 2, 5 * 2, 12 * 2)
+const particleAttributes = generateParticleAttributes(1024)
 const sakura = new PointParticle(65536)
 const sakura2 = new FlakeParticle(particleAttributes, triangles)
 export function start(scene: Scene) {
