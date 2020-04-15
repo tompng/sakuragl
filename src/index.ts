@@ -15,7 +15,7 @@ camera.position.z = 2
 renderer.setSize(800 * 2, 600 * 2)
 
 function animate() {
-  update()
+  update(scene, camera)
   requestAnimationFrame(animate)
   renderer.render(scene, camera)
 }

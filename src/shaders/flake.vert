@@ -18,11 +18,10 @@ void main(){
   vec3 pos = rotate(rotate(position, axis1, rot1), axis2, rot2);
   vec3 norm = rotate(rotate(normal, axis1, rot1), axis2, rot2);
   vec3 p = center + 0.02 * pos + 0.06 * sin(2.0 * pi * (freq1 * time + rand1)) + 0.04 * sin(2.0 * pi * (freq2 * time + rand2)) + 0.02 * sin(2.0 * pi * (freq3 * time + rand3));
-  vec4 globalPosition = modelViewMatrix * vec4(p, 1);
-  vec3 cameraDiff = globalPosition.xyz - cameraPosition;
-  vDecay = min(1.0, 0.5 / dot(cameraDiff, cameraDiff));
+  vec4 globalPosition = modelMatrix * vec4(p, 1);
+  vDecay = max(0.0, 1.0 - distance(globalPosition.xyz, cameraPosition) / 4.0);
   vCoord = vec2(0.5) + 0.5 * position.xy;
-  gl_Position = projectionMatrix * globalPosition;
+  gl_Position = projectionMatrix * viewMatrix * globalPosition;
   vPosition = globalPosition.xyz;
   vNormal = normalize((modelViewMatrix * vec4(normal, 1)).xyz);
 }
