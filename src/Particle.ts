@@ -5,10 +5,11 @@ import {
   ShaderMaterial,
   Points,
   Mesh,
+  Texture,
   AdditiveBlending
 } from 'three'
 import * as THREE from 'three'
-import { Point2D, Triangle2D, sakuraOutlineTriangles, sakuraTriangles } from './sakura'
+import { Point2D, Triangle2D, sakuraOutlineTriangles, sakuraTriangles, createSakuraTexture } from './sakura'
 import pointsVertexShader from './shaders/points.vert'
 import pointsFragmentShader from './shaders/points.frag'
 import flakeVertexShader from './shaders/flake.vert'
@@ -57,7 +58,7 @@ function pointsShader(uniforms: { time: { value: number }}) {
   })
 }
 
-function flakeShader(uniforms: { time: { value: number }}) {
+function flakeShader(uniforms: { time: { value: number }; texture: { value: Texture | null }}) {
   return new ShaderMaterial({
     uniforms,
     vertexShader: flakeVertexShader,
@@ -120,10 +121,11 @@ function generateParticleAttributes(size: number): ParticleAttributes {
 
 export class FlakeParticle {
   mesh: Mesh
-  uniforms = { time: { value: 0 } }
+  uniforms = { time: { value: 0 }, texture: { value: null as null | Texture } }
   shader: ShaderMaterial
-  constructor(attrs: ParticleAttributes, triangles: Triangle2D[]) {
+  constructor(attrs: ParticleAttributes, triangles: Triangle2D[], texture: Texture) {
     const geometry = FlakeParticle.generateGeometry(attrs, triangles)
+    this.uniforms.texture.value = texture
     this.shader = flakeShader(this.uniforms)
     this.mesh = new Mesh(geometry, this.shader)
   }
@@ -201,9 +203,14 @@ export class FlakeParticle {
 
 const outlineTriangles = sakuraOutlineTriangles(5)
 const triangles = sakuraTriangles(3 * 2, 5 * 2, 12 * 2)
+const texture = new Texture(createSakuraTexture(512))
+texture.magFilter = THREE.LinearFilter
+texture.minFilter = THREE.LinearFilter
+texture.format = THREE.RGBFormat
+texture.needsUpdate = true
 const particleAttributes = generateParticleAttributes(1024)
 const sakura = new PointParticle(65536)
-const sakura2 = new FlakeParticle(particleAttributes, triangles)
+const sakura2 = new FlakeParticle(particleAttributes, triangles, texture)
 export function start(scene: Scene) {
   sakura.mesh.position.x = -0.5
   sakura.mesh.position.y = -0.5
@@ -213,6 +220,7 @@ export function start(scene: Scene) {
   sakura2.mesh.position.z = -0.5
   // scene.add(sakura.mesh)
   scene.add(sakura2.mesh)
+  document.body.appendChild(createSakuraTexture(512))
 }
 export function update() {
   sakura.update()
