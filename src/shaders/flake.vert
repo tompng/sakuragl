@@ -1,23 +1,20 @@
 uniform float time;
-attribute vec3 center, random;
-attribute float offset;
+attribute vec3 center, freq1, freq2, freq3, rand1, rand2, rand3, nrand1, nrand2;
 varying float col;
 varying vec2 coord;
-
-vec3 rotate(vec3 v, vec3 axis, float th) {
-  axis = normalize(axis);
-  vec3 vn = axis * dot(v, axis);
+const float pi = 3.14159265358979323846;
+vec3 rotate(vec3 v, vec3 normalizedAxis, float theta) {
+  vec3 vn = normalizedAxis * dot(v, normalizedAxis);
   vec3 vc = v - vn;
-  vec3 vs = cross(axis, vc);
-  return vn + cos(th) * vc - sin(th) * vs;
+  vec3 vs = cross(normalizedAxis, vc);
+  return vn + cos(theta) * vc - sin(theta) * vs;
 }
 void main(){
-  float t = mod(time + offset, 1.0);
-  vec3 pos = rotate(position, vec3(random.xy - vec2(0.5), 0), (32.0 + 16.0 * random.x) * t + sin(18.0 * t));
-  pos = rotate(pos, random.zxy - vec3(0.5), 4.0 * t);
-  vec3 p = center + 0.01 * pos + vec3(0, 0, 1) * t + 0.01 * sin(6.28 * random.yzx + (vec3(8) + 12.0 * random) * t);
+  vec3 pos = rotate(position, normalize(nrand1 * vec3(2, 1, 0)), 2.0 * pi * (freq2.x + freq2.y) * time + sin(6.0 * pi * (time + rand1.x)));
+  pos = rotate(pos, nrand2, 2.0 * pi * (freq1.y + freq1.z) * time);
+  vec3 p = center + 0.01 * pos + 0.03 * sin(2.0 * pi * (freq1 * time + rand1)) + 0.02 * sin(2.0 * pi * (freq2 * time + rand2)) + 0.01 * sin(2.0 * pi * (freq3 * time + rand3));
   vec4 cpos = modelViewMatrix * vec4(p, 1);
-  col = (0.5 / cpos.z / cpos.z) * t * (1.0 - t);
+  col = min(1.0, 0.1 / cpos.z / cpos.z);
   coord = position.xy + vec2(1, 0);
   gl_Position = projectionMatrix * cpos;
 }

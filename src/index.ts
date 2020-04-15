@@ -5,7 +5,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { start, update } from './Particle'
 
 const scene = new Scene()
-const camera = new PerspectiveCamera(75, 4 / 3, 0.1, 1000)
+const camera = new PerspectiveCamera(75, 4 / 3, 0.01, 100)
 const renderer = new WebGLRenderer()
 new OrbitControls(camera, renderer.domElement)
 const light = new DirectionalLight(0xffffaa, 1)
