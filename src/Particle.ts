@@ -9,11 +9,10 @@ import {
 } from 'three'
 import * as THREE from 'three'
 import { sakuraOutline, sakuraOutlineTriangles, sakuraTriangles } from './sakura'
-import { loadFileSync } from './loadFileSync'
-const pointsVertexShader = loadFileSync('src/shaders/points.vert')
-const pointsFragmentShader = loadFileSync('src/shaders/points.frag')
-const flakeVertexShader = loadFileSync('src/shaders/flake.vert')
-const flakeFragmentShader = loadFileSync('src/shaders/flake.frag')
+import pointsVertexShader from './shaders/points.vert'
+import pointsFragmentShader from './shaders/points.frag'
+import flakeVertexShader from './shaders/flake.vert'
+import flakeFragmentShader from './shaders/flake.frag'
 
 export class PointParticle {
   mesh: Points
