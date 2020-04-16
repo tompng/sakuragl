@@ -162,13 +162,11 @@ function generateFlakeGeometry(attrs: ParticleAttributes, triangles: Triangle2D[
   const nrand2s: number[] = []
   const geometry = new BufferGeometry()
   for (let i = 0; i < attrs.size; i++) {
-    const cx1 = 2 * Math.random() - 1
-    const cy1 = 2 * Math.random() - 1
-    const cx2 = 2 * Math.random() - 1
-    const cy2 = 2 * Math.random() - 1
-    const cc1 = 2 * Math.PI * Math.random()
-    const cc2 = 2 * Math.PI * Math.random()
-    const cv = 0.4 * Math.random()
+    const [cx1, cy1, rz1] = attrs.rand1[i]
+    const [cx2, cy2, rz2] = attrs.rand2[i]
+    const cc1 = Math.PI * rz1
+    const cc2 = Math.PI * rz2
+    const cv = 0.4 * ((rz1 + rz2) * 7 % 1)
     const fz = ({ x, y }: Point2D) => {
       return 0.08 * (
         + Math.sin(4 * (cx1 * x + cy1 * y) + cc1)
