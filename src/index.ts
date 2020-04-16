@@ -6,13 +6,13 @@ import { start, update } from './Particle'
 
 const scene = new Scene()
 const camera = new PerspectiveCamera(75, 4 / 3, 0.01, 100)
-const renderer = new WebGLRenderer()
+const renderer = new WebGLRenderer({ antialias: true })
 new OrbitControls(camera, renderer.domElement)
 const light = new DirectionalLight(0xffffaa, 1)
 const alight = new AmbientLight(0x202040, 1)
 scene.add(light, alight)
 camera.position.z = 2
-renderer.setSize(800 * 2, 600 * 2)
+renderer.setSize(800, 600)
 
 function animate() {
   update(scene, camera)
