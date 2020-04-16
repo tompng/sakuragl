@@ -244,60 +244,30 @@ function flatMapBox<T, U>(box: T[][][], f: (t: T, i: number, j: number, k: numbe
   })))
   return result
 }
-
+function mod(n: number, m: number) {
+  return n - Math.floor(n / m) * m
+}
 class SakuraParticle {
-  smallGeometryBoxes: BufferGeometry[][][][]
-  largeGeometryBoxes: BufferGeometry[][][][]
+  baseSize = 4
+  boxIds: number[][][]
+  levelGeometries: BufferGeometry[][]
   uniforms: { time: { value: number }, texture: { value: Texture } }
   shader: ShaderMaterial
   meshes: Mesh[] = []
   constructor(texture: Texture, density: number = 256) {
     this.uniforms = { time: { value: 0 }, texture: { value: texture } }
     this.shader = flakeShader(this.uniforms)
-    const attributes = [...Array(8)].map(() => generateParticleAttributes(density))
-    const smallBoxAttributes = box(4, () => attributes[Math.floor(attributes.length * Math.random())])
-    function merge(boxAttrs: ParticleAttributes[][][], i: number, j: number, k: number, size: number) {
-      const list: PositionedParticleAttribute[] = []
-      eachBox(size, (x, y, z) => {
-        list.push({ position: { x, y, z }, attributes: boxAttrs[i + x][j + y][k + z] })
-      })
-      return mergeParticleAttributes(list)
-    }
-    const largeBoxAttributes = box(2, (i, j, k) => merge(smallBoxAttributes, 2 * i, 2 * j, 2 * k, 2))
-    const triangles0 = sakuraOutlineTriangles(2)
-    const triangles1 = sakuraOutlineTriangles(5)
-    const triangles2 = sakuraTriangles(3, 5, 12)
-    const triangles3 = sakuraTriangles(6, 10, 24)
-    const t0geom = new Map<ParticleAttributes, BufferGeometry>()
-    const t1geom = new Map<ParticleAttributes, BufferGeometry>()
-    const t2geom = new Map<ParticleAttributes, BufferGeometry>()
-    const t3geom = new Map<ParticleAttributes, BufferGeometry>()
-    this.smallGeometryBoxes = [
-      mapBox(smallBoxAttributes, attrs => {
-        let g = t0geom.get(attrs)
-        if (!g) t0geom.set(attrs, g = generateFlakeGeometry(attrs, triangles0, 1))
-        return g
-      }),
-      mapBox(smallBoxAttributes, attrs => {
-        let g = t1geom.get(attrs)
-        if (!g) t1geom.set(attrs, g = generateFlakeGeometry(attrs, triangles1, 1))
-        return g
-      }),
-      mapBox(smallBoxAttributes, attrs => {
-        let g = t2geom.get(attrs)
-        if (!g) t2geom.set(attrs, g = generateFlakeGeometry(attrs, triangles2, 1))
-        return g
-      }),
-      mapBox(smallBoxAttributes, attrs => {
-        let g = t3geom.get(attrs)
-        if (!g) t3geom.set(attrs, g = generateFlakeGeometry(attrs, triangles3, 1))
-        return g
-      })
-    ]
-    this.largeGeometryBoxes = [
-      mapBox(largeBoxAttributes, attrs => generateFlakeGeometry(attrs, triangles0, 2)),
-      mapBox(largeBoxAttributes, attrs => generateFlakeGeometry(attrs, triangles1, 2))
-    ]
+    const numTypes = 8
+    const attributes = [...Array(numTypes)].map(() => generateParticleAttributes(density))
+    this.boxIds = box(this.baseSize, () => Math.floor(numTypes * Math.random()))
+    this.levelGeometries = [
+      sakuraOutlineTriangles(2),
+      sakuraOutlineTriangles(5),
+      sakuraTriangles(3, 5, 12),
+      sakuraTriangles(6, 10, 24)
+    ].map(
+      triangles => attributes.map(attrs => generateFlakeGeometry(attrs, triangles, 1))
+    )
   }
   update(scene: Scene, camera: Camera) {
     const time = performance.now() / 1000
@@ -322,64 +292,38 @@ class SakuraParticle {
     const threshold0 = 0.5
     const threshold1 = 1
     const threshold2 = 2.5
-    const threshold3 = 4
+    const radius = 4
     const wind = time + 0.5 * (Math.sin(0.0133 * time + 1) + Math.sin(0.0173 * time + 2))
-    let baseX = 0.1 * wind + 0.02 * (Math.sin(0.0113 * time + 3) + Math.sin(0.0181 * time + 4))
-    let baseY = 0.2 * wind + 0.02 * (Math.sin(0.0143 * time + 5) + Math.sin(0.0163 * time + 6))
-    let baseZ = -0.1 * time + 0.02 * (Math.sin(0.0127 * time + 7) + Math.sin(0.0151 * time + 8))
+    const baseX = 0.1 * wind + 0.02 * (Math.sin(0.0113 * time + 3) + Math.sin(0.0181 * time + 4))
+    const baseY = 0.2 * wind + 0.02 * (Math.sin(0.0143 * time + 5) + Math.sin(0.0163 * time + 6))
+    const baseZ = -0.1 * time + 0.02 * (Math.sin(0.0127 * time + 7) + Math.sin(0.0151 * time + 8))
     const { x: cx, y: cy, z: cz } = camera.position
-    const baseSize = 4
-    baseX += Math.round((cx - baseX - baseSize / 2) / baseSize) * baseSize
-    baseY += Math.round((cy - baseY - baseSize / 2) / baseSize) * baseSize
-    baseZ += Math.round((cz - baseZ - baseSize / 2) / baseSize) * baseSize
     const distance = ({ x, y, z }: Point3D, size: number) => {
       const r = Math.sqrt((x + size / 2 - cx) ** 2 + (y + size / 2 - cy) ** 2 + (z + size / 2 - cz) ** 2)
       const dr = size * Math.sqrt(3) / 2 + 0.14
       return { min: r - dr, max: r + dr }
     }
-
-    const setLarge = (position: Point3D, i: number, j: number, k: number) => {
-      const { min } = distance(position, 2)
-      if (threshold3 < min) return
-      if (threshold2 < min) {
-        prepareMesh(this.largeGeometryBoxes[0][i][j][k], position)
-      } else if (threshold1 < min) {
-        prepareMesh(this.largeGeometryBoxes[1][i][j][k], position)
-      } else {
-        const { x, y, z } = position
-        eachBox(2, (ii, jj, kk) => setSmall({ x: x + ii, y: y + jj, z: z + kk }, 2 * i + ii, 2 * j + jj, 2 * k + kk))
+    for (let i = Math.floor(cx - baseX - radius); i < cx - baseX + radius; i++) {
+      for (let j = Math.floor(cy - baseY - radius); j < cy - baseY + radius; j++) {
+        for (let k = Math.floor(cz - baseZ - radius); k < cz - baseZ + radius; k++) {
+          const position = { x: i + baseX, y: j + baseY, z: k + baseZ }
+          const { min } = distance(position, 1)
+          if (min >= radius) continue
+          const level = min < threshold0 ? 3 : min < threshold1 ? 2 : min < threshold2 ? 1 : 0
+          const typeId = this.boxIds[mod(i, this.baseSize)][mod(j, this.baseSize)][mod(k, this.baseSize)]
+          prepareMesh(this.levelGeometries[level][typeId], position)
+        }
       }
     }
-    let n = 0
-    const setSmall = (position: Point3D, i: number, j: number, k: number) => {
-      const { min } = distance(position, 1)
-      if (min < threshold0) {
-        prepareMesh(this.smallGeometryBoxes[3][i][j][k], position)
-      } else if (min < threshold1) {
-        prepareMesh(this.smallGeometryBoxes[2][i][j][k], position)
-      } else if (min < threshold2) {
-        prepareMesh(this.smallGeometryBoxes[1][i][j][k], position)
-      } else if (min < threshold3) {
-        prepareMesh(this.smallGeometryBoxes[0][i][j][k], position)
-      }
-    }
-    eachBox(9, (i, j, k) => {
-      setLarge({
-        x: baseX + (i - 4) * 2,
-        y: baseY + (j - 4) * 2,
-        z: baseZ + (k - 4) * 2
-      }, i % 2, j % 2, k % 2)
-    })
     for (let i = meshIndex; i < this.meshes.length; i++) {
       this.meshes[i].visible = false
     }
   }
 }
 
-const particle = new SakuraParticle(texture, 64)
+const particle = new SakuraParticle(texture, 32)
 ;(window as any).particle = particle
-export function start(scene: Scene) {
-}
+export function start(scene: Scene) {}
 export function update(scene: Scene, camera: Camera) {
   ;(window as any).scene = scene
   ;(window as any).camera = camera
