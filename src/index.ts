@@ -1,26 +1,80 @@
+import * as THREE from 'three'
 import { Scene, PerspectiveCamera, WebGLRenderer, Vector3 } from 'three'
 import { AmbientLight, DirectionalLight } from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 //import { start } from './branchTest'
 import { start, update } from './Particle'
+import { Land } from './Land'
 
 const scene = new Scene()
 const camera = new PerspectiveCamera(75, 4 / 3, 0.01, 100)
 const renderer = new WebGLRenderer({ antialias: true })
-new OrbitControls(camera, renderer.domElement)
+
+
+const canvas = renderer.domElement
+canvas.onclick = () => {
+  if (document.pointerLockElement !== canvas) canvas.requestPointerLock()
+}
+let xyrot = 0
+let zrot = 0
+canvas.onmousemove = e => {
+  xyrot -= 0.01 * e.movementX
+  zrot -= 0.01 * e.movementY
+  if (zrot > Math.PI / 2) zrot = Math.PI / 2
+  if (zrot < -Math.PI / 2) zrot = -Math.PI / 2
+}
+
+const keypad: Record<string, boolean | undefined> = {}
+window.onkeydown = (e: KeyboardEvent) => { keypad[e.key] = true }
+window.onkeyup = (e: KeyboardEvent) => { keypad[e.key] = false }
+let cpos = { x: 0, y: 0, z: 1 }
+let fw = 0.1
+function updateCamera() {
+  const forward = (keypad['w'] ? 1 : 0) - (keypad['s'] ? 1 : 0)
+  fw = (fw - 0.1) * 0.9 + 0.1 * forward + 0.1
+
+  const lr = (keypad['d'] ? 1 : 0) - (keypad['a'] ? 1 : 0)
+  const zcos = Math.cos(zrot)
+  const zsin = Math.sin(zrot)
+  const dirx = zcos * Math.cos(xyrot)
+  const diry = zcos * Math.sin(xyrot)
+  const dirz = zsin
+  const vf = 0.02 * Math.max(fw, fw * 2)
+  const vlr = 0.02 * lr
+  camera.setRotationFromEuler(new THREE.Euler(Math.PI / 2 + zrot, 0, -Math.PI / 2 + xyrot, 'ZXY'))
+  cpos.x += vf * dirx + vlr * diry
+  cpos.y += vf * diry - vlr * dirx
+  cpos.z += vf * dirz
+  if (cpos.z < 0.2) cpos.z = 0.2
+  if (cpos.z > 8) cpos.z = 8
+  camera.position.x = cpos.x
+  camera.position.y = cpos.y
+  camera.position.z = cpos.z
+}
+
+
 const light = new DirectionalLight(0xffffaa, 1)
 const alight = new AmbientLight(0x202040, 1)
 scene.add(light, alight)
 camera.position.z = 2
 renderer.setSize(800, 600)
 
+const land = new Land()
 function animate() {
+  updateCamera()
   update(scene, camera)
   requestAnimationFrame(animate)
   renderer.render(scene, camera)
+  land.mesh.position.x = camera.position.x
+  land.mesh.position.y = camera.position.y
 }
 onload = () => {
   start(scene)
+  scene.add(new THREE.Mesh(
+    new THREE.PlaneBufferGeometry(800,800,16,16),
+    new THREE.MeshBasicMaterial({ color: '#000' })
+  ))
+  scene.add(land.mesh)
+
   renderer.domElement.style.width = '800px'
   renderer.domElement.style.height = '600px'
   document.body.appendChild(renderer.domElement)
