@@ -20,6 +20,31 @@ export function interpolate(arr: number[], t: number) {
   return arr[ti % arr.length] * (1 - t) + t * arr[(ti + 1) % arr.length]
 }
 
+export function periodicSmooth(array: number[], scale: number) {
+  const size = array.length
+  const out = new Array(size).fill(0)
+  let weight = 0
+  for (let k = 0; k < 2; k++) {
+    const ex = Math.exp(-(k + 1) / scale)
+    const exs = 1 / (1 - ex ** size)
+    const c = 2 - 3 * k
+    weight += (2 / (1 - ex) - 1) * c
+    let s = 0
+    for (let i = 0; i < size; i++) s = s * ex + array[i]
+    s *= exs
+    for (let i = 0; i < size; i++) out[i] += c * (s = s * ex + array[i])
+    s = 0
+    for (let i = size - 1; i >= 0; i--) s = s * ex + array[i]
+    s *= exs
+    for (let i = size - 1; i >= 0; i--) {
+      out[i] += c * (s *= ex)
+      s += array[i]
+    }
+  }
+  for (let i = 0; i < size; i++) out[i] /= weight
+  return out
+}
+
 export class Random {
   y: number
   constructor(seed?: number) {
@@ -37,30 +62,10 @@ export class Random {
   float01() {
     return this.next() / 0x7fffffff
   }
-  smooth(n: number, e0 = 0.9) {
+  smooth(n: number, scale = 10) {
     const base: number[] = []
-    const out: number[] = []
-    for (let i = 0; i < n; i++) {
-      base[i] = this.float()
-      out[i] = 0
-    }
-    let s = 0
-    for (let k = 0; k < 2; k++) {
-      const e = e0 ** (k + 1)
-      const scale = 1 / (1 - e ** n)
-      const c = 2 - 3 * k
-      let s = 0
-      for (let i = 0; i < n; i++) s = s * e + base[i]
-      s *= scale
-      for (let i = 0; i < n; i++) out[i] += c * (s = s * e + base[i])
-      s = 0
-      for (let i = n - 1; i >= 0; i--) s = s * e + base[i]
-      s *= scale
-      for (let i = n - 1; i >= 0; i--) {
-        out[i] += c * (s *= e)
-        s += base[i]
-      }
-    }
+    for (let i = 0; i < n; i++) base[i] = this.float()
+    const out = periodicSmooth(base, scale)
     let sum = 0
     out.forEach(v => { sum += v })
     const avg = sum / n
