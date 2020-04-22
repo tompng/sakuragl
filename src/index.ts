@@ -24,13 +24,13 @@ canvas.onmousemove = e => {
 }
 
 const keypad: Record<string, boolean | undefined> = {}
-window.onkeydown = (e: KeyboardEvent) => { keypad[e.key] = true }
-window.onkeyup = (e: KeyboardEvent) => { keypad[e.key] = false }
+window.onkeydown = (e: KeyboardEvent) => { keypad[e.key.toLowerCase()] = true }
+window.onkeyup = (e: KeyboardEvent) => { keypad[e.key.toLowerCase()] = false }
 let cpos = { x: 0, y: 0, z: 1 }
 let fw = 0.1
 function updateCamera() {
   const forward = (keypad['w'] ? 1 : 0) - (keypad['s'] ? 1 : 0)
-  fw = (fw - 0.1) * 0.9 + 0.1 * forward + 0.1
+  fw = fw * 0.9 + 0.1 * forward
 
   const lr = (keypad['d'] ? 1 : 0) - (keypad['a'] ? 1 : 0)
   const zcos = Math.cos(zrot)
