@@ -4,7 +4,6 @@ import { AmbientLight, DirectionalLight } from 'three'
 //import { start } from './branchTest'
 import { start, update } from './Particle'
 import { Land } from './Land'
-import { createWaveTexture } from './wave'
 
 const scene = new Scene()
 const camera = new PerspectiveCamera(75, 4 / 3, 0.01, 100)
@@ -63,18 +62,12 @@ const land = new Land()
 function animate() {
   updateCamera()
   update(scene, camera)
+  land.update()
   requestAnimationFrame(animate)
   renderer.render(scene, camera)
-  land.mesh.position.x = camera.position.x
-  land.mesh.position.y = camera.position.y
 }
 onload = () => {
-  document.body.appendChild(createWaveTexture(256, 16))
   start(scene)
-  scene.add(new THREE.Mesh(
-    new THREE.PlaneBufferGeometry(800,800,16,16),
-    new THREE.MeshBasicMaterial({ color: '#000' })
-  ))
   scene.add(land.mesh)
 
   renderer.domElement.style.width = '800px'
