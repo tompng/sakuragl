@@ -16,6 +16,7 @@ import riverFragmentShader from './shaders/river.frag'
 import { createWaveTexture } from './wave'
 
 type RiverParam = ReturnType<typeof riverParam>
+
 function riverParam(x: number) {
   const yparams = [0.409, 0.313, 0.233, 0.137]
   const wparams = [0.251, 0.173]
@@ -41,6 +42,22 @@ function riverParam(x: number) {
     width,
     down,
     up
+  }
+}
+const riverInterval = 16
+const height = 2
+
+export function landZ(x: number, y: number) {
+  const { position, width } = riverParam(x)
+  const t = ((y - position.y) / riverInterval % 1 + 1) % 1
+  const s = width / 2 / riverInterval
+  if (s < t && t < 1 - s) {
+    const u = (t - s) / (1 - 2 * s)
+    return 4 * height * u * (1 - u)
+  } else {
+    const u = (t <= s ? t + s : t + s - 1) / s / 2
+    const depth = height * 2 * s / (1 - 2 * s)
+    return - 4 * depth * u * (1 - u)
   }
 }
 
@@ -74,30 +91,18 @@ function generateRiverGeometry(xfrom: number, xto: number, xres: number, wres: n
   return geometry
 }
 
-function generateLandGeometry(xfrom: number, xto: number, riverInterval: number, height: number, xres: number, wres: number) {
+function generateLandGeometry(xfrom: number, xto: number, xres: number, wres: number) {
   const geometry = new BufferGeometry()
   const positions: number[] = []
   const normals: number[] = []
   function addPoint(rparam: RiverParam, wi: number) {
     const t = wi / wres
-    const s = rparam.width / 2 / riverInterval
+    const x = rparam.position.x
     const y = rparam.position.y + riverInterval * t
-    let z: number
-    let zdx: number, zdy: number
-    const depth = height * 2 * s / (1 - 2 * s)
-    if (s < t && t < 1 - s) {
-      const u = (t - s) / (1 - 2 * s)
-      z = 4 * height * u * (1 - u)
-      zdy = 4 * height * (1 - 2 * u) * height / riverInterval / (1 - 2 * s)
-      zdx = 0//4 * height * (1 - 2 * u) * 
-    } else {
-      const u = (t <= s ? t + s : t + s - 1) / s / 2
-      const c = - 4 * depth
-      z = c * u * (1 - u)
-      zdy = c * (1 - 2 * u) / riverInterval / s / 2
-      zdx = 0//c * (1 - 2 * u) * (t <= s ? t : t - 1) * riverInterval
-    }
-    positions.push(rparam.position.x, y, z)
+    const d = 0.01
+    const zdx = (landZ(x + d, y) - landZ(x - d, y)) / 2 / d
+    const zdy = (landZ(x, y + d) - landZ(x, y - d)) / 2 / d
+    positions.push(x, y, landZ(x, y))
     const nr = Math.sqrt(1 + zdx ** 2 + zdy ** 2)
     normals.push(-zdx / nr, -zdy / nr, 1 / nr)
   }
@@ -143,8 +148,7 @@ export class Land {
       fragmentShader: riverFragmentShader,
       transparent: true
     })
-    const riverInterval = 8
-    const landGeometry = generateLandGeometry(-8, 8, riverInterval, 1, 128, 32)
+    const landGeometry = generateLandGeometry(-8, 8, 128, 32)
     this.landShader = new ShaderMaterial({
       uniforms: {},
       vertexShader: landVertexShader,
