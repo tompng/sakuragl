@@ -71,6 +71,7 @@ onload = () => {
   scene.add(land.riverMesh)
   scene.add(land.landMeshU)
   scene.add(land.landMeshD)
+  scene.add(land.grassMesh)
 
   renderer.domElement.style.width = '800px'
   renderer.domElement.style.height = '600px'

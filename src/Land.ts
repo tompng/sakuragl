@@ -13,6 +13,8 @@ import landVertexShader from './shaders/land.vert'
 import landFragmentShader from './shaders/land.frag'
 import riverVertexShader from './shaders/river.vert'
 import riverFragmentShader from './shaders/river.frag'
+import grassVertexShader from './shaders/grass.vert'
+import grassFragmentShader from './shaders/grass.frag'
 import { createWaveTexture } from './wave'
 
 type RiverParam = ReturnType<typeof riverParam>
@@ -59,6 +61,34 @@ export function landZ(x: number, y: number) {
     const depth = height * 2 * s / (1 - 2 * s)
     return - 4 * depth * u * (1 - u)
   }
+}
+
+function generateGrassGeometry(baseX: number, baseY: number, size = 1, count = 1024) {
+  const positions: number[] = []
+  const rels: number[] = []
+  const normals: number[] = []
+  const thresholds: number[] = []
+  for (let i = 0; i < count; i++) {
+    const x = baseX + size * Math.random()
+    const y = baseY + size * Math.random()
+    const z = landZ(x, y)
+    const d = 0.01
+    const zdx = (landZ(x + d, y) - landZ(x - d, y)) / 2 / d
+    const zdy = (landZ(x, y + d) - landZ(x, y - d)) / 2 / d
+    const nr = Math.sqrt(1 + zdx ** 2 + zdy ** 2)
+    const nx = -zdx / nr, ny = -zdy / nr, nz = 1 / nr
+    const t = Math.random()
+    positions.push(x, y, z, x, y, z, x, y, z)
+    normals.push(nx, ny, nz, nx, ny, nz, nx, ny, nz)
+    rels.push(-1, 0, 1, 0, 0, 1)
+    thresholds.push(t, t, t)
+  }
+  const geometry = new BufferGeometry()
+  geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
+  geometry.setAttribute('normal', new BufferAttribute(new Float32Array(normals), 3))
+  geometry.setAttribute('rel', new BufferAttribute(new Float32Array(rels), 2))
+  geometry.setAttribute('threshold', new BufferAttribute(new Float32Array(thresholds), 1))
+  return geometry
 }
 
 function generateRiverGeometry(xfrom: number, xto: number, xres: number, wres: number, safe = 0.1) {
@@ -139,38 +169,41 @@ export class Land {
   landShader: ShaderMaterial
   landMeshU: Mesh
   landMeshD: Mesh
+  grassShader: ShaderMaterial
+  grassMesh: Mesh
   riverUniforms = { time: { value: 0 }, texture: { value: waveTexture } }
+  grassUniforms = { time: { value: 0 }, texture: { value: waveTexture }}
   constructor() {
     const riverGeometry = generateRiverGeometry(-8, 8, 128, 32)
+    const landGeometry = generateLandGeometry(-8, 8, 128, 32)
+    const grassGeometry = generateGrassGeometry(-4, -4, 8, 65536)
     this.riverShader = new ShaderMaterial({
       uniforms: this.riverUniforms,
       vertexShader: riverVertexShader,
       fragmentShader: riverFragmentShader,
       transparent: true
     })
-    const landGeometry = generateLandGeometry(-8, 8, 128, 32)
     this.landShader = new ShaderMaterial({
       uniforms: {},
       vertexShader: landVertexShader,
       fragmentShader: landFragmentShader,
     })
-    this.riverMesh = new Mesh(
-      riverGeometry,
-      this.riverShader
-    )
-    this.landMeshU = new Mesh(
-      landGeometry,
-      this.landShader
-    )
-    this.landMeshD = new Mesh(
-      landGeometry,
-      this.landShader
-    )
+    this.grassShader = new ShaderMaterial({
+      uniforms: this.grassUniforms,
+      vertexShader: grassVertexShader,
+      fragmentShader: grassFragmentShader,
+    })
+    this.riverMesh = new Mesh(riverGeometry, this.riverShader)
+    this.landMeshU = new Mesh(landGeometry, this.landShader)
+    this.landMeshD = new Mesh(landGeometry, this.landShader)
+    this.grassMesh = new Mesh(grassGeometry, this.grassShader)
     this.landMeshD.position.y = -riverInterval
   }
   update() {
     const time = performance.now() / 1000
     this.riverUniforms.time.value = 0.05 * time
     this.riverShader.needsUpdate = true
+    this.grassUniforms.time.value = 0.05 * time
+    this.grassShader.needsUpdate = true
   }
 }
