@@ -246,33 +246,48 @@ export class Land {
     this.grassShader.needsUpdate = true
     const { x: cameraX, y: cameraY, z: cameraZ } = this.camera.position
     const grassFar = 4, grassNear = 2
-    for (let xi = Math.floor(cameraX - grassFar); xi < cameraX + grassFar; xi++) {
-      for (let yi = Math.floor(cameraY - grassFar); yi < cameraY + grassFar; yi++) {
-        const distances = [[xi, yi], [xi + 1, yi], [xi, yi + 1], [xi + 1, yi + 1]].map(([x, y]) => 
-          Math.sqrt((x - cameraX) ** 2 + (y - cameraY) ** 2 + (landZ(xi, yi) - cameraZ) ** 2)
+    for (let x = Math.floor(cameraX - grassFar); x < cameraX + grassFar; x++) {
+      for (let y = Math.floor(cameraY - grassFar); y < cameraY + grassFar; y++) {
+        const distances = [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]].map(([x, y]) => 
+          Math.sqrt((x - cameraX) ** 2 + (y - cameraY) ** 2 + (landZ(x, y) - cameraZ) ** 2)
         )
         const minDistance = Math.min(...distances)
         const polygons = Math.floor(1024 * Math.min(1, (grassFar - minDistance) / (grassFar - grassNear)))
         if (polygons < 0) continue
-        const grassKey = `g/${xi}/${yi}`
-        const grassGeom = this.cachedGeometries.get(grassKey, () => generateGrassGeometry(xi, yi, 1, 512))
+        const grassKey = `g/${x}/${y}`
+        const grassGeom = this.cachedGeometries.get(grassKey, () => generateGrassGeometry(x, y, 1, 512))
         grassGeom.setDrawRange(0, 3 * polygons)
         const grassMesh = this.cachedMeshes.get(grassKey, () => {
           const m = new Mesh(grassGeom, this.grassShader)
-          console.log('added', xi, yi)
           this.scene.add(m)
           return m
         })
         grassMesh.visible = true
       }
     }
-
-
-
-
-
-
-
-
+    const maxDistance = 16
+    const xInterval = 2
+    for (let x = Math.floor((cameraX - maxDistance) / xInterval) * xInterval; x < cameraX + maxDistance; x += xInterval) {
+      const landKey = `l/${x}`
+      const riverKey = `r/${x}`
+      const landGeom = this.cachedGeometries.get(landKey, () => generateLandGeometry(x, x + xInterval, 8, 32))
+      const riverGeom = this.cachedGeometries.get(riverKey, () => generateRiverGeometry(x, x + xInterval, 32, 32))
+      for (let y = Math.floor((cameraY - maxDistance) / riverInterval) * riverInterval; y < cameraY + maxDistance; y += riverInterval) {
+        const landMesh = this.cachedMeshes.get(`${landKey}/${y}`, () => {
+          const m = new Mesh(landGeom, this.landShader)
+          m.position.y = y
+          this.scene.add(m)
+          return m
+        })
+        landMesh.visible = true
+      }
+      const riverMesh = this.cachedMeshes.get(riverKey, () => {
+        const m = new Mesh(riverGeom, this.riverShader)
+        this.scene.add(m)
+        return m
+      })
+      riverMesh.position.y = Math.round(cameraY / riverInterval) * riverInterval
+      riverMesh.visible = true
+    }
   }
 }
