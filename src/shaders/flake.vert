@@ -14,12 +14,13 @@ void main(){
   vec3 axis1 = normalize(nrand1 * vec3(2, 1, 0));
   float rot1 = 2.0 * pi * dot(freq2, vec3(1)) * time + sin(6.0 * pi * (time + rand1.x));
   vec3 axis2 = nrand2;
+  vec4 globalCenter = modelMatrix * vec4(center + 0.06 * sin(2.0 * pi * (freq1 * time + rand1)) + 0.04 * sin(2.0 * pi * (freq2 * time + rand2)) + 0.02 * sin(2.0 * pi * (freq3 * time + rand3)), 1);
+  float dist = distance(globalCenter.xyz, cameraPosition);
   float rot2 = 2.0 * pi * dot(freq1, vec3(1)) * time;
   vec3 rpos = rotate(rotate(position, axis1, rot1), axis2, rot2);
   vec3 norm = rotate(rotate(normal, axis1, rot1), axis2, rot2);
-  vec3 p = center + 0.02 * rpos + 0.06 * sin(2.0 * pi * (freq1 * time + rand1)) + 0.04 * sin(2.0 * pi * (freq2 * time + rand2)) + 0.02 * sin(2.0 * pi * (freq3 * time + rand3));
-  vec4 globalPosition = modelMatrix * vec4(p, 1);
-  vDecay = max(0.0, 1.0 - distance(globalPosition.xyz, cameraPosition) / 4.0);
+  vec4 globalPosition = globalCenter + modelMatrix * vec4(0.02 * clamp(4.0 * (4.0 - dist), 0.0, 1.0) * rpos, 0);
+  vDecay = 1.0 - dist / 16.0;
   vCoord = vec2(0.5) + 0.5 * position.xy;
   gl_Position = projectionMatrix * viewMatrix * globalPosition;
   vPosition = globalPosition.xyz;
