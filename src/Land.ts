@@ -69,6 +69,7 @@ function generateGrassGeometry(baseX: number, baseY: number, size = 1, count = 1
   const normals: number[] = []
   const thresholds: number[] = []
   for (let i = 0; i < count; i++) {
+    const t = (count - i) / count
     const x = baseX + size * Math.random()
     const y = baseY + size * Math.random()
     const z = landZ(x, y)
@@ -77,7 +78,6 @@ function generateGrassGeometry(baseX: number, baseY: number, size = 1, count = 1
     const zdy = (landZ(x, y + d) - landZ(x, y - d)) / 2 / d
     const nr = Math.sqrt(1 + zdx ** 2 + zdy ** 2)
     const nx = -zdx / nr, ny = -zdy / nr, nz = 1 / nr
-    const t = Math.random()
     positions.push(x, y, z, x, y, z, x, y, z)
     normals.push(nx, ny, nz, nx, ny, nz, nx, ny, nz)
     rels.push(-1, 0, 1, 0, 0, 1)
@@ -163,20 +163,55 @@ waveTexture.wrapS = THREE.RepeatWrapping
 waveTexture.wrapT = THREE.RepeatWrapping
 waveTexture.needsUpdate = true
 
+class Cache<T> {
+  elements = new Map<string, { timer: number, data: T }>()
+  timeout: number
+  release?: (data: T) => void
+  constructor({ timeout, release }: { timeout?: number, release?: (data: T) => void } = {}) {
+    this.timeout = timeout || 1000
+    this.release = release
+  }
+  forEach(func: (data: T) => void) {
+    this.elements.forEach(ref => func(ref.data))
+  }
+  get(name: string, func: () => T) {
+    let ref = this.elements.get(name)
+    const timer = setTimeout(() => this.delete(name), this.timeout)
+    if (ref) {
+      clearTimeout(ref.timer)
+      ref.timer = timer
+    } else {
+      ref = { data: func(), timer }
+      this.elements.set(name, ref)
+    }
+    return ref.data
+  }
+  delete(name: string) {
+    const ref = this.elements.get(name)
+    if (!ref) return
+    this.elements.delete(name)
+    this.release?.(ref.data)
+  }
+}
+
 export class Land {
   riverShader: ShaderMaterial
-  riverMesh: Mesh
+  // riverMesh: Mesh
   landShader: ShaderMaterial
-  landMeshU: Mesh
-  landMeshD: Mesh
+  // landMeshU: Mesh
+  // landMeshD: Mesh
   grassShader: ShaderMaterial
-  grassMesh: Mesh
+  // grassMesh: Mesh
+
+  cachedMeshes = new Cache<Mesh>({ release: mesh => this.deleteMesh(mesh) })
+  cachedGeometries = new Cache<BufferGeometry>({ release: geom => geom.dispose() })
+
   riverUniforms = { time: { value: 0 }, texture: { value: waveTexture } }
   grassUniforms = { time: { value: 0 }, texture: { value: waveTexture }}
-  constructor() {
-    const riverGeometry = generateRiverGeometry(-8, 8, 128, 32)
-    const landGeometry = generateLandGeometry(-8, 8, 128, 32)
-    const grassGeometry = generateGrassGeometry(-4, -4, 8, 65536)
+  constructor(public scene: Scene, public camera: Camera) {
+    // const riverGeometry = generateRiverGeometry(-8, 8, 128, 32)
+    // const landGeometry = generateLandGeometry(-8, 8, 32, 32)
+    // const grassGeometry = generateGrassGeometry(-4, -4, 8, 65536)
     this.riverShader = new ShaderMaterial({
       uniforms: this.riverUniforms,
       vertexShader: riverVertexShader,
@@ -193,17 +228,51 @@ export class Land {
       vertexShader: grassVertexShader,
       fragmentShader: grassFragmentShader,
     })
-    this.riverMesh = new Mesh(riverGeometry, this.riverShader)
-    this.landMeshU = new Mesh(landGeometry, this.landShader)
-    this.landMeshD = new Mesh(landGeometry, this.landShader)
-    this.grassMesh = new Mesh(grassGeometry, this.grassShader)
-    this.landMeshD.position.y = -riverInterval
+    // this.riverMesh = new Mesh(riverGeometry, this.riverShader)
+    // this.landMeshU = new Mesh(landGeometry, this.landShader)
+    // this.landMeshD = new Mesh(landGeometry, this.landShader)
+    // this.grassMesh = new Mesh(grassGeometry, this.grassShader)
+    // this.landMeshD.position.y = -riverInterval
+  }
+  deleteMesh(mesh: Mesh) {
+    this.scene.remove(mesh)
   }
   update() {
+    this.cachedMeshes.forEach(mesh => { mesh.visible = false })
     const time = performance.now() / 1000
     this.riverUniforms.time.value = 0.05 * time
     this.riverShader.needsUpdate = true
     this.grassUniforms.time.value = 0.05 * time
     this.grassShader.needsUpdate = true
+    const { x: cameraX, y: cameraY, z: cameraZ } = this.camera.position
+    const grassFar = 4, grassNear = 2
+    for (let xi = Math.floor(cameraX - grassFar); xi < cameraX + grassFar; xi++) {
+      for (let yi = Math.floor(cameraY - grassFar); yi < cameraY + grassFar; yi++) {
+        const distances = [[xi, yi], [xi + 1, yi], [xi, yi + 1], [xi + 1, yi + 1]].map(([x, y]) => 
+          Math.sqrt((x - cameraX) ** 2 + (y - cameraY) ** 2 + (landZ(xi, yi) - cameraZ) ** 2)
+        )
+        const minDistance = Math.min(...distances)
+        const polygons = Math.floor(1024 * Math.min(1, (grassFar - minDistance) / (grassFar - grassNear)))
+        if (polygons < 0) continue
+        const grassKey = `g/${xi}/${yi}`
+        const grassGeom = this.cachedGeometries.get(grassKey, () => generateGrassGeometry(xi, yi, 1, 512))
+        grassGeom.setDrawRange(0, 3 * polygons)
+        const grassMesh = this.cachedMeshes.get(grassKey, () => {
+          const m = new Mesh(grassGeom, this.grassShader)
+          console.log('added', xi, yi)
+          this.scene.add(m)
+          return m
+        })
+        grassMesh.visible = true
+      }
+    }
+
+
+
+
+
+
+
+
   }
 }
