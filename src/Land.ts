@@ -88,6 +88,18 @@ function generateGrassGeometry(baseX: number, baseY: number, size = 1, count = 1
   geometry.setAttribute('normal', new BufferAttribute(new Float32Array(normals), 3))
   geometry.setAttribute('rel', new BufferAttribute(new Float32Array(rels), 2))
   geometry.setAttribute('threshold', new BufferAttribute(new Float32Array(thresholds), 1))
+  const corners = [[0, 0], [0, 1], [1, 1], [1, 0]].map(([i, j]) => {
+    const x = baseX + size * i
+    const y = baseY + size * j
+    return { x, y, z: landZ(x, y) }
+  })
+  const center = corners.reduce((ac, p) => ({
+    x: ac.x + p.x / 4,
+    y: ac.y + p.y / 4,
+    z: ac.z + p.z / 4
+  }), { x: 0, y: 0, z: 0 })
+  const radius = Math.sqrt(Math.max(...corners.map(({ x, y, z }) => (x - center.x) ** 2 + (y - center.y) ** 2 + (z - center.z) ** 2)))
+  geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(center.x, center.y, center.z), radius)
   return geometry
 }
 
