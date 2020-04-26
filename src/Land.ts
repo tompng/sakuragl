@@ -128,8 +128,18 @@ function generateRiverGeometry(xfrom: number, xto: number, xres: number, wres: n
       addPoint(r0, wi + 1)
     }
   }
+  const river = [...new Array(xres + 1)].map((_, i) => {
+    const x = xfrom + (xto - xfrom) * i / xres
+    const r = riverParam(x)
+    return { x, d: r.down.y, u: r.up.y }
+  })
+  const center = { x: (xfrom + xto) / 2, y: (Math.min(...river.map(r => r.d)) + Math.max(...river.map(r => r.u))) / 2 }
+  const radius = Math.sqrt(Math.max(...river.map(r =>
+    Math.max((r.x - center.x) ** 2 + Math.max((r.u - center.y) ** 2, (r.d - center.y) ** 2))
+  )))
   geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
   geometry.setAttribute('velocity', new BufferAttribute(new Float32Array(velocities), 2))
+  geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(center.x, center.y, 0), radius)
   return geometry
 }
 
