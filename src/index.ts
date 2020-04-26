@@ -27,12 +27,12 @@ const keypad: Record<string, boolean | undefined> = {}
 window.onkeydown = (e: KeyboardEvent) => { keypad[e.key.toLowerCase()] = true }
 window.onkeyup = (e: KeyboardEvent) => { keypad[e.key.toLowerCase()] = false }
 let cpos = { x: 0, y: 0, z: 1 }
-let fw = 0.1
+let fw = 0
+let lr = 0
 function updateCamera() {
   const forward = (keypad['w'] ? 1 : 0) - (keypad['s'] ? 1 : 0)
   fw = fw * 0.9 + 0.1 * forward
-
-  const lr = (keypad['d'] ? 1 : 0) - (keypad['a'] ? 1 : 0)
+  lr = lr * 0.9 + 0.1 * ((keypad['d'] ? 1 : 0) - (keypad['a'] ? 1 : 0))
   const zcos = Math.cos(zrot)
   const zsin = Math.sin(zrot)
   const dirx = zcos * Math.cos(xyrot)
@@ -57,22 +57,25 @@ const alight = new AmbientLight(0x202040, 1)
 scene.add(light, alight)
 camera.position.z = 2
 renderer.setSize(800, 600)
-
+let prevKeypad = keypad
 const land = new Land(scene, camera)
+let time = 0
+let paused = false
+let prevTime = performance.now()
 function animate() {
+  let current = performance.now()
+  if (!prevKeypad[' '] && keypad[' ']) paused = !paused
+  prevKeypad = { ...keypad }
+  if (!paused) time += (prevTime - current) / 1000
+  prevTime = current
   updateCamera()
-  update(scene, camera)
-  land.update()
+  update(time, scene, camera)
+  land.update(time)
   requestAnimationFrame(animate)
   renderer.render(scene, camera)
 }
 onload = () => {
   start(scene)
-  // scene.add(land.riverMesh)
-  // scene.add(land.landMeshU)
-  // scene.add(land.landMeshD)
-  // scene.add(land.grassMesh)
-
   renderer.domElement.style.width = '800px'
   renderer.domElement.style.height = '600px'
   document.body.appendChild(renderer.domElement)

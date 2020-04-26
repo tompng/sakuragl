@@ -196,22 +196,13 @@ class Cache<T> {
 
 export class Land {
   riverShader: ShaderMaterial
-  // riverMesh: Mesh
   landShader: ShaderMaterial
-  // landMeshU: Mesh
-  // landMeshD: Mesh
   grassShader: ShaderMaterial
-  // grassMesh: Mesh
-
   cachedMeshes = new Cache<Mesh>({ release: mesh => this.deleteMesh(mesh) })
   cachedGeometries = new Cache<BufferGeometry>({ release: geom => geom.dispose() })
-
   riverUniforms = { time: { value: 0 }, texture: { value: waveTexture } }
   grassUniforms = { time: { value: 0 }, texture: { value: waveTexture }}
   constructor(public scene: Scene, public camera: Camera) {
-    // const riverGeometry = generateRiverGeometry(-8, 8, 128, 32)
-    // const landGeometry = generateLandGeometry(-8, 8, 32, 32)
-    // const grassGeometry = generateGrassGeometry(-4, -4, 8, 65536)
     this.riverShader = new ShaderMaterial({
       uniforms: this.riverUniforms,
       vertexShader: riverVertexShader,
@@ -228,18 +219,12 @@ export class Land {
       vertexShader: grassVertexShader,
       fragmentShader: grassFragmentShader,
     })
-    // this.riverMesh = new Mesh(riverGeometry, this.riverShader)
-    // this.landMeshU = new Mesh(landGeometry, this.landShader)
-    // this.landMeshD = new Mesh(landGeometry, this.landShader)
-    // this.grassMesh = new Mesh(grassGeometry, this.grassShader)
-    // this.landMeshD.position.y = -riverInterval
   }
   deleteMesh(mesh: Mesh) {
     this.scene.remove(mesh)
   }
-  update() {
+  update(time: number) {
     this.cachedMeshes.forEach(mesh => { mesh.visible = false })
-    const time = performance.now() / 1000
     this.riverUniforms.time.value = 0.05 * time
     this.riverShader.needsUpdate = true
     this.grassUniforms.time.value = 0.05 * time

@@ -26,8 +26,8 @@ export class PointParticle {
     const geometry = PointParticle.generateGeometry(size)
     this.mesh = new Points(geometry, this.shader)
   }
-  update() {
-    this.uniforms.time.value = 0.1 * performance.now() / 1000 % 1
+  update(time: number) {
+    this.uniforms.time.value = 0.1 * time % 1
     this.shader.needsUpdate = true
   }
   static generateGeometry(size: number) {
@@ -267,8 +267,7 @@ class SakuraParticle {
       triangles => attributes.map(attrs => generateFlakeGeometry(attrs, triangles, 1))
     )
   }
-  update(scene: Scene, camera: Camera) {
-    const time = performance.now() / 1000
+  update(time: number, scene: Scene, camera: Camera) {
     this.uniforms.time.value = 0.05 * time
     this.shader.needsUpdate = true
     let meshIndex = 0
@@ -322,8 +321,8 @@ class SakuraParticle {
 const particle = new SakuraParticle(texture, 32)
 ;(window as any).particle = particle
 export function start(scene: Scene) {}
-export function update(scene: Scene, camera: Camera) {
+export function update(time: number, scene: Scene, camera: Camera) {
   ;(window as any).scene = scene
   ;(window as any).camera = camera
-  particle.update(scene, camera)
+  particle.update(time, scene, camera)
 }
