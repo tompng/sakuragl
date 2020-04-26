@@ -35,14 +35,14 @@ function updateCamera() {
   lr = lr * 0.9 + 0.1 * ((keypad['d'] ? 1 : 0) - (keypad['a'] ? 1 : 0))
   const zcos = Math.cos(zrot)
   const zsin = Math.sin(zrot)
-  const dirx = zcos * Math.cos(xyrot)
-  const diry = zcos * Math.sin(xyrot)
+  const dirx = Math.cos(xyrot)
+  const diry = Math.sin(xyrot)
   const dirz = zsin
   const vf = 0.02 * Math.max(fw, fw * 2)
   const vlr = 0.02 * lr
   camera.setRotationFromEuler(new THREE.Euler(Math.PI / 2 + zrot, 0, -Math.PI / 2 + xyrot, 'ZXY'))
-  cpos.x += vf * dirx + vlr * diry
-  cpos.y += vf * diry - vlr * dirx
+  cpos.x += vf * dirx * zcos + vlr * diry
+  cpos.y += vf * diry * zcos - vlr * dirx
   cpos.z += vf * dirz
   cpos.z = Math.max(cpos.z, landZ(cpos.x, cpos.y) + 0.1)
   if (cpos.z > 8) cpos.z = 8

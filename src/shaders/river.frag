@@ -21,6 +21,6 @@ void main() {
   gl_FragColor.rgb = vec3(0.5 + (val.z - 0.5) * min(length(vVelocity),0.4));
   vec3 normal = normalize(vNormal);
   float a = 0.5 + 0.5 * dot(light, normal);
-  gl_FragColor.rgb *= 0.8 * a;
+  gl_FragColor.rgb *= 0.8 * a * vDecay;
   gl_FragColor.a = 0.8;
 }
