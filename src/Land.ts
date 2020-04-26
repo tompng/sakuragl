@@ -27,10 +27,10 @@ function riverParam(x: number) {
     y += Math.sin(p * x + i)
     dx += p * Math.cos(p * x + i)
   })
-  let width = 1, wdx = 0
+  let width = 3, wdx = 0
   wparams.forEach((p, i) => {
-    width += Math.sin(p * x + i) / 3
-    wdx += p * Math.cos(p * x + i) / 3
+    width += Math.sin(p * x + i)
+    wdx += p * Math.cos(p * x + i)
   })
   const v = 1 / (1 + width)
   const rv = Math.sqrt(1 + dx ** 2)
@@ -46,8 +46,8 @@ function riverParam(x: number) {
     up
   }
 }
-const riverInterval = 16
-const height = 2
+const riverInterval = 32
+const height = 4
 
 export function landZ(x: number, y: number) {
   const { position, width } = riverParam(x)
