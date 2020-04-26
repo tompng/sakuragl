@@ -61,12 +61,14 @@ let prevKeypad = keypad
 const land = new Land(scene, camera)
 let time = 0
 let paused = false
+let timeScale = 1
 let prevTime = performance.now()
 function animate() {
   let current = performance.now()
   if (!prevKeypad[' '] && keypad[' ']) paused = !paused
   prevKeypad = { ...keypad }
-  if (!paused) time += (prevTime - current) / 1000
+  timeScale = timeScale * 0.9 + 0.1 * (paused ? 0 : 1)
+  time += (prevTime - current) / 1000 * timeScale
   prevTime = current
   updateCamera()
   update(time, scene, camera)
