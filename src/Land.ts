@@ -16,6 +16,7 @@ import riverFragmentShader from './shaders/river.frag'
 import grassVertexShader from './shaders/grass.vert'
 import grassFragmentShader from './shaders/grass.frag'
 import { createWaveTexture } from './wave'
+import { getTexture as getSkyTexture } from './Sky'
 
 type RiverParam = ReturnType<typeof riverParam>
 
@@ -32,7 +33,7 @@ function riverParam(x: number) {
     width += Math.sin(p * x + i)
     wdx += p * Math.cos(p * x + i)
   })
-  const v = 1 / (1 + width)
+  const v = 2 / (1 + width)
   const rv = Math.sqrt(1 + dx ** 2)
   const down = { x, y: y - width / 2, dx: dx - wdx / 2 }
   const up = { x, y: y + width / 2, dx: dx + wdx / 2 }
@@ -222,8 +223,8 @@ export class Land {
   grassShader: ShaderMaterial
   cachedMeshes = new Cache<Mesh>({ release: mesh => this.deleteMesh(mesh) })
   cachedGeometries = new Cache<BufferGeometry>({ release: geom => geom.dispose() })
-  riverUniforms = { time: { value: 0 }, texture: { value: waveTexture } }
-  grassUniforms = { time: { value: 0 }, texture: { value: waveTexture }}
+  riverUniforms = { time: { value: 0 }, texture: { value: waveTexture }, sky: { value: getSkyTexture() } }
+  grassUniforms = { time: { value: 0 }, texture: { value: waveTexture } }
   constructor(public scene: Scene, public camera: Camera) {
     this.riverShader = new ShaderMaterial({
       uniforms: this.riverUniforms,
@@ -248,6 +249,7 @@ export class Land {
   update(time: number) {
     this.cachedMeshes.forEach(mesh => { mesh.visible = false })
     this.riverUniforms.time.value = 0.05 * time
+    this.riverUniforms.sky.value = getSkyTexture()
     this.riverShader.needsUpdate = true
     this.grassUniforms.time.value = 0.05 * time
     this.grassShader.needsUpdate = true

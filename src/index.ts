@@ -4,11 +4,11 @@ import { AmbientLight, DirectionalLight } from 'three'
 //import { start } from './branchTest'
 import { start, update } from './Particle'
 import { Land, landZ } from './Land'
+import { Sky } from './Sky'
 
 const scene = new Scene()
-const camera = new PerspectiveCamera(75, 4 / 3, 0.01, 100)
+const camera = new PerspectiveCamera(75, 4 / 3, 0.01, 32)
 const renderer = new WebGLRenderer({ antialias: true })
-
 
 const canvas = renderer.domElement
 canvas.onclick = () => {
@@ -44,7 +44,7 @@ function updateCamera() {
   cpos.x += vf * dirx * zcos + vlr * diry
   cpos.y += vf * diry * zcos - vlr * dirx
   cpos.z += vf * dirz
-  cpos.z = Math.max(cpos.z, landZ(cpos.x, cpos.y) + 0.1)
+  cpos.z = Math.max(cpos.z, landZ(cpos.x, cpos.y) + 0.1, 0.1)
   if (cpos.z > 8) cpos.z = 8
   camera.position.x = cpos.x
   camera.position.y = cpos.y
@@ -58,7 +58,9 @@ scene.add(light, alight)
 camera.position.z = 2
 renderer.setSize(800, 600)
 let prevKeypad = keypad
+const sky = new Sky()
 const land = new Land(scene, camera)
+scene.add(sky.mesh)
 let time = 0
 let paused = false
 let timeScale = 1
@@ -73,6 +75,7 @@ function animate() {
   updateCamera()
   update(time, scene, camera)
   land.update(time)
+  sky.update(camera)
   requestAnimationFrame(animate)
   renderer.render(scene, camera)
 }

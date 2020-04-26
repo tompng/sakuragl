@@ -14,6 +14,10 @@ module.exports = {
       {
         test: /\.(frag|vert)$/,
         use: 'raw-loader'
+      },
+      {
+        test: /\.(jpg|png)$/,
+        use: 'url-loader'
       }
     ]
   },

@@ -3,6 +3,7 @@ uniform sampler2D texture;
 uniform float time;
 varying vec3 vNormal;
 varying float vDecay;
+varying vec3 vPosition;
 varying vec2 vVelocity;
 varying vec2 vCoord;
 
@@ -17,8 +18,8 @@ void main() {
   );
   vVelocity = velocity;
   vNormal = normalize(vec3(-w.x, -w.y, 1));
-  vec4 globalPosition = vec4(xy, w.z, 1);
-  gl_Position = projectionMatrix * viewMatrix * globalPosition;
+  vPosition = vec3(xy, w.z);
+  gl_Position = projectionMatrix * viewMatrix * vec4(vPosition, 1);
   float dist = distance(vec3(xy, 0), cameraPosition);
   vDecay = max(0.0, 1.0 - dist / 16.0);
 }
