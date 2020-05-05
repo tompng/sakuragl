@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { Scene, PerspectiveCamera, WebGLRenderer, Vector3 } from 'three'
+import { Scene, PerspectiveCamera, WebGLRenderer, Vector3, Mesh } from 'three'
 import { AmbientLight, DirectionalLight } from 'three'
 //import { start } from './branchTest'
 import { start, update } from './Particle'
@@ -52,8 +52,22 @@ function updateCamera() {
 }
 
 
-const light = new DirectionalLight(0xffffaa, 1)
-const alight = new AmbientLight(0x202040, 1)
+import { generateGeometry } from './Flower'
+import { TriangleLevels, createSakuraTexture } from './sakura'
+const texture = new THREE.Texture(createSakuraTexture(512))
+texture.magFilter = THREE.LinearFilter
+texture.minFilter = THREE.LinearFilter
+texture.format = THREE.RGBFormat
+texture.needsUpdate = true
+const geometry = generateGeometry([...new Array(30)].map(() => 2 * Math.random() - 1), TriangleLevels[3])
+const material = new THREE.MeshBasicMaterial({ color: '#fff', map: texture, side: THREE.DoubleSide })
+const mesh = new THREE.Mesh(geometry, material)
+mesh.position.z = 1
+scene.add(mesh)
+
+
+const light = new DirectionalLight(0xffffff, 1)
+const alight = new AmbientLight(0x202020, 1)
 scene.add(light, alight)
 camera.position.z = 2
 renderer.setSize(800, 600)

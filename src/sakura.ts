@@ -25,7 +25,7 @@ export function sakuraHalfOutline(n: number): Point2D[] {
 
 export function sakuraOutline(n: number): Point2D[] {
   const coords = sakuraHalfOutline(n)
-  for (let i = n - 1; i >= 0; i--) {
+  for (let i = n - 2; i >= 0; i--) {
     const { x, y } = coords[i]
     coords.push({ x, y: -y })
   }
@@ -128,6 +128,7 @@ export function createSakuraTexture(size: number) {
     const t2 = 2 * range * (i + 1) / n - range
     vein(start, t1, t2, 0, veins)
   }
+  ctx.save()
   ctx.beginPath()
   veins.forEach(([p, q]) => {
     const dx = q.x - p.x
@@ -165,6 +166,32 @@ export function createSakuraTexture(size: number) {
   ctx.filter = "blur(64px)";
   ctx.fill()
 
+  ctx.restore()
+
+  ctx.beginPath()
+  ctx.lineWidth = 0.02
+  ctx.strokeStyle = 'red'
+  outline.forEach(({ x, y }, i) => i == 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y))
+  ctx.closePath()
+  ctx.stroke()
+
+  ctx.beginPath()
+  ctx.filter = ''
+  const gradient = ctx.createLinearGradient(-1, -1, -1, 1)
+  gradient.addColorStop(0, '#f66')
+  gradient.addColorStop(7 / 8, '#8d4')
+  gradient.addColorStop(1, 'black')
+  ctx.fillStyle = gradient
+  ctx.fillRect(-1, -1, 1 / 16, 2)
   canvas.style.boxShadow = '0 0 1px red'
   return canvas
 }
+
+export const TriangleLevels = [
+  sakuraOutlineTriangles(2),
+  sakuraOutlineTriangles(5),
+  sakuraTriangles(3, 5, 12),
+  sakuraTriangles(6, 10, 24)
+] as const
+
+;(window as any).foo = TriangleLevels

@@ -10,7 +10,7 @@ import {
   AdditiveBlending
 } from 'three'
 import * as THREE from 'three'
-import { Point2D, Triangle2D, sakuraOutlineTriangles, sakuraTriangles, createSakuraTexture } from './sakura'
+import { Point2D, Triangle2D, TriangleLevels, createSakuraTexture } from './sakura'
 import pointsVertexShader from './shaders/points.vert'
 import pointsFragmentShader from './shaders/points.frag'
 import flakeVertexShader from './shaders/flake.vert'
@@ -258,12 +258,7 @@ class SakuraParticle {
     const numTypes = 8
     const attributes = [...Array(numTypes)].map(() => generateParticleAttributes(density))
     this.boxIds = box(this.baseSize, () => Math.floor(numTypes * Math.random()))
-    this.levelGeometries = [
-      sakuraOutlineTriangles(2),
-      sakuraOutlineTriangles(5),
-      sakuraTriangles(3, 5, 12),
-      sakuraTriangles(6, 10, 24)
-    ].map(
+    this.levelGeometries = TriangleLevels.map(
       triangles => attributes.map(attrs => generateFlakeGeometry(attrs, triangles, 1))
     )
   }
