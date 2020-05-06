@@ -88,18 +88,19 @@ export function generateGeometry(attrs: FlowerAttrs, triangles: Triangle2D[], ro
     const l = Math.sqrt(1 + d ** 2)
     return [r, 1 / l, -r / l]
   }
-  const add = (th: number, z: number) => {
+  const stemBend = 0.5
+  const stemZFrom = -3
+  const addStemPoint = (th: number, z: number) => {
     const [r, nr, nz] = rparam(z)
     const cos = Math.cos(th)
     const sin = Math.sin(th)
     coordOffsets.push(0, 0)
-    positions.push(r * cos, r * sin, z)
+    positions.push(r * cos -stemBend * z * (z - stemZFrom) / stemZFrom / stemZFrom, r * sin, z)
     coords.push(z > 0 ? 0 : z ** 2 / 9, 1)
     normals.push(nr * cos, nr * sin, nz)
-    console.log(nr ,cos, sin, nz)
   }
-  const z = (t: number, m: number) => {
-    return -3 + 3 * (5 * t / (1 + 4 * t)) + m * t / 8
+  const stemZ = (t: number, m: number) => {
+    return stemZFrom - stemZFrom * (5 * t / (1 + 4 * t)) + m * t / 8
   }
   for (let i = 0; i < 10; i++) {
     const th1 = 2 * Math.PI * i / 10 + rot
@@ -109,13 +110,56 @@ export function generateGeometry(attrs: FlowerAttrs, triangles: Triangle2D[], ro
       const t2 = (j + 1) / 10
       const m1 = i % 2
       const m2 = 1 - m1
-      add(th1, z(t1, m1))
-      add(th2, z(t1, m2))
-      add(th2, z(t2, m2))
-      add(th1, z(t1, m1))
-      add(th2, z(t2, m2))
-      add(th1, z(t2, m1))
+      addStemPoint(th1, stemZ(t1, m1))
+      addStemPoint(th2, stemZ(t1, m2))
+      addStemPoint(th2, stemZ(t2, m2))
+      addStemPoint(th1, stemZ(t1, m1))
+      addStemPoint(th2, stemZ(t2, m2))
+      addStemPoint(th1, stemZ(t2, m1))
     }
+  }
+  for (let i = 0 ;i < 32; i++) {
+    const th = 2 * Math.PI * i / 32 + Math.random() / 40
+    const cos = Math.cos(th)
+    const sin = Math.sin(th)
+    const r = Math.sqrt(Math.random())
+    const lth = 2 * Math.PI * Math.random()
+    const rmin = 1 / 16
+    const rrange = 1 / 3
+    const len = 1 / 2 + Math.random() / 6
+    const lw = 1 / 64
+    const lc = lw * Math.cos(lth) / 2
+    const ls = lw * Math.sin(lth) / 2
+    const zoffset = -1 / 32
+    const add = (x: number, y: number, z: number, t: number) => {
+      coordOffsets.push(0, 0)
+      positions.push(x, y, z)
+      coords.push(t, 0)
+      normals.push(0, 0, 0)
+    }
+    const line = (t1: number, t2: number) => {
+      const r1 = r * (rmin + rrange * (t1 + t1 * (1 - t1) / 2))
+      const r2 = r * (rmin + rrange * (t2 + t2 * (1 - t2) / 2))
+      const x1 = cos * r1
+      const y1 = sin * r1
+      const z1 = len * t1 + zoffset
+      const x2 = cos * r2
+      const y2 = sin * r2
+      const z2 = len * t2 + zoffset
+      add(x1 - lc, y1 - ls, z1, t1)
+      add(x1 + lc, y1 + ls, z1, t1)
+      add(x2 + lc, y2 + ls, z2, t2)
+      add(x1 - lc, y1 - ls, z1, t1)
+      add(x2 + lc, y2 + ls, z2, t2)
+      add(x2 - lc, y2 - ls, z2, t2)
+      add(x1 + ls, y1 - lc, z1, t1)
+      add(x1 - ls, y1 + lc, z1, t1)
+      add(x2 - ls, y2 + lc, z2, t2)
+      add(x1 + ls, y1 - lc, z1, t1)
+      add(x2 - ls, y2 + lc, z2, t2)
+      add(x2 + ls, y2 - lc, z2, t2)
+    }
+    for (let j = 0; j < 4; j++) line(j / 4, (j + 1) / 4)
   }
   geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
   geometry.setAttribute('normal', new BufferAttribute(new Float32Array(normals), 3))

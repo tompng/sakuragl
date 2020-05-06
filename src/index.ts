@@ -69,7 +69,7 @@ const material = new THREE.ShaderMaterial({
   side: THREE.DoubleSide
 })
 const mesh = new THREE.Mesh(geometry, material)
-mesh.scale.x=mesh.scale.y=mesh.scale.z=0.25
+mesh.scale.x=mesh.scale.y=mesh.scale.z=0.02
 mesh.position.z = 1
 scene.add(mesh)
 

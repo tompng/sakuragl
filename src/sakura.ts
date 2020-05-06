@@ -199,12 +199,19 @@ export function createShadowedSakuraTexture(size: number) {
     ctx.restore()
   }
   ctx.restore()
-  const gradient = ctx.createLinearGradient(0, 0, size, 0)
-  gradient.addColorStop(0, '#d44')
-  gradient.addColorStop(1 / 4, '#882')
-  gradient.addColorStop(1, '#241')
-  ctx.fillStyle = gradient
+  const stemGradient = ctx.createLinearGradient(0, 0, size, 0)
+  stemGradient.addColorStop(0, '#d44')
+  stemGradient.addColorStop(1 / 4, '#882')
+  stemGradient.addColorStop(1, '#241')
+  ctx.fillStyle = stemGradient
   ctx.fillRect(0, 0, size, size / 64)
+
+  const innerGradient = ctx.createLinearGradient(0, 0, size, 0)
+  innerGradient.addColorStop(0, '#fcc')
+  innerGradient.addColorStop(3 / 4, '#fcc')
+  innerGradient.addColorStop(1, '#ff8')
+  ctx.fillStyle = innerGradient
+  ctx.fillRect(0, size, size, -size / 64)
   return canvas
 }
 

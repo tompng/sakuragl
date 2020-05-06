@@ -12,6 +12,7 @@ void main() {
     ndot * 0.4 + 0.6,
     -ndot * 0.4 + 0.4
   );
+  if (vCoord.y == 0.0) a = 1.0;
   gl_FragColor = texture2D(texture, vCoord + (gl_FrontFacing ? vOffset : - vOffset) / 4.0) + vec4(0.1, 0.1, 0.1, 0);
   gl_FragColor.rgb *= a * vDecay;
 }
