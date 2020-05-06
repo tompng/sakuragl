@@ -12,10 +12,8 @@ import {
 import * as THREE from 'three'
 import { Point2D, Triangle2D, TriangleLevels, createSakuraTexture } from './sakura'
 
-
-
 type FlowerAttrs = number[]
-const sakuraTranslateX = 8 / 9
+const sakuraTranslateX = 15 / 16
 const deg = 20
 const flwcos = Math.cos(Math.PI * deg / 180)
 const flwsin = Math.sin(Math.PI * deg / 180)
@@ -23,9 +21,11 @@ export function generateGeometry(attrs: FlowerAttrs, triangles: Triangle2D[], ro
   const positions: number[] = []
   const normals: number[] = []
   const coords: number[] = []
+  const coordOffsets: number[] = []
+  const zlevels = [-2, 0, 2, -1, 1]
   const geometry = new BufferGeometry()
   for (let i = 0; i < 5; i++) {
-    const zlevel = [-2, 0, 2, -1, 1][i]
+    const zlevel = zlevels[i]
     const rotcos = Math.cos(Math.PI * 2 * i / 5 + rot)
     const rotsin = Math.sin(Math.PI * 2 * i / 5 + rot)
     const [cx1, cy1, rz1, cx2, cy2, rz2] = attrs.slice(6 * i, 6 * i + 6)
@@ -69,10 +69,15 @@ export function generateGeometry(attrs: FlowerAttrs, triangles: Triangle2D[], ro
       const nr = Math.sqrt(nx ** 2 + ny ** 2 + nz ** 2)
       return [nx / nr, ny / nr, nz / nr] as const
     }
+    const upShadow = zlevels[(i + 1) % 5] > zlevel
+    const downShadow = zlevels[(i + 4) % 5] > zlevel
     const coord = ({ x, y }: Point2D) => {
-      return [(x + 1) / 2, (y + 1) / 2]
+      return [(x + 1) / 4 + (upShadow ? 1 : 0) / 2, (y + 1) / 4 + (downShadow ? 0 : 1) / 2]
+      // return [(x + 1) / 2, (y + 1) / 2]
     }
     for (const [a, b, c] of triangles) {
+      const offset = [upShadow ? 1 : 0, downShadow ? 0 : 1]
+      coordOffsets.push(...offset, ...offset, ...offset)
       positions.push(...position(a), ...position(b), ...position(c))
       normals.push(...normal(a), ...normal(b), ...normal(c))
       coords.push(...coord(a), ...coord(b), ...coord(c))
@@ -81,5 +86,6 @@ export function generateGeometry(attrs: FlowerAttrs, triangles: Triangle2D[], ro
   geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
   geometry.setAttribute('normal', new BufferAttribute(new Float32Array(normals), 3))
   geometry.setAttribute('uv', new BufferAttribute(new Float32Array(coords), 2))
+  geometry.setAttribute('offset', new BufferAttribute(new Int8Array(coordOffsets), 2))
   return geometry
 }

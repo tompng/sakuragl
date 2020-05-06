@@ -53,8 +53,8 @@ function updateCamera() {
 
 
 import { generateGeometry } from './Flower'
-import { TriangleLevels, createSakuraTexture } from './sakura'
-const texture = new THREE.Texture(createSakuraTexture(512))
+import { TriangleLevels, createShadowedSakuraTexture } from './sakura'
+const texture = new THREE.Texture(createShadowedSakuraTexture(512))
 texture.magFilter = THREE.LinearFilter
 texture.minFilter = THREE.LinearFilter
 texture.format = THREE.RGBFormat

@@ -1,5 +1,5 @@
 export type Point2D = { x: number; y: number }
-export type Polar2D = { r: number ;th: number }
+export type Polar2D = { r: number; th: number }
 export type Triangle2D = [Point2D, Point2D, Point2D]
 export function sakuraRadius(th: number) {
   return 0.5 + th / 5 - 1 / 4 / (4 * th + 1) ** 4 + Math.cos(2 * th) / 10
@@ -49,7 +49,7 @@ export function sakuraTriangles(nRadial: number, nInner: number, nOuter: number 
     let n = Math.ceil(i * nInner / nRadial) * 2
     if (n <= 4 && i > 0) continue
     const r = i / nRadial
-    const inner: Point2D[] = [];
+    const inner: Point2D[] = []
     for (let j = 0; j <= n; j++) {
       const { x, y } = coords[n === 0 ? 0 : Math.round(j * (coords.length - 1) / n)]
       inner.push({ x: sakuraXOffset + r * (x - sakuraXOffset), y: r * y })
@@ -75,15 +75,10 @@ export function sakuraTriangles(nRadial: number, nInner: number, nOuter: number 
   return triangles
 }
 
-export function createSakuraTexture(size: number) {
-  const canvas = document.createElement('canvas')
-  canvas.width = canvas.height = size
-  const ctx = canvas.getContext('2d')!
+export function renderSakura(ctx: CanvasRenderingContext2D, size: number, upShadow = false, downShadow = false) {
   const outline = sakuraOutline(128)
   const baseColor = '#fdd'
-  ctx.scale(size, size)
-  ctx.scale(0.5, 0.5)
-  ctx.translate(1, 1)
+  ctx.save()
   ctx.fillStyle = baseColor
   ctx.fillRect(-1, -1, 2, 2)
   const start = { x: sakuraXOffset - sakuraRadius(Math.PI), y: 0 }
@@ -95,6 +90,11 @@ export function createSakuraTexture(size: number) {
     const r = Math.sqrt(x2 ** 2 + y ** 2)
     const th = Math.atan2(Math.abs(y), x - sakuraXOffset)
     return r < sakuraRadius(th)
+  }
+  function outlinePath() {
+    ctx.beginPath()
+    outline.forEach(({ x, y }, i) => i == 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y))
+    ctx.closePath()
   }
   function vein(p: Point2D, t1: number, t2: number, r: number, ac: [Point2D, Point2D][]) {
     const l0 = vdist / (t2 - t1) - r
@@ -147,43 +147,75 @@ export function createSakuraTexture(size: number) {
   ctx.lineWidth = 0.01
   ctx.strokeStyle = 'white'
   ctx.lineCap = ctx.lineJoin = 'round'
-  ctx.filter = "blur(2px)";
+  ctx.filter = `blur(${2 * size / 512}px)`
   ctx.globalAlpha = 0.5
   ctx.stroke()
   ctx.globalAlpha = 1
 
-  ctx.beginPath()
   ctx.lineWidth = 0.01
   ctx.strokeStyle = baseColor
-  outline.forEach(({ x, y }, i) => i == 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y))
-  ctx.closePath()
-  ctx.filter = "blur(4px)";
+  outlinePath()
+  ctx.filter = `blur(${4 * size / 512}px)`
   ctx.stroke()
 
   ctx.beginPath()
   ctx.arc(start.x, start.y, 0.4, 0, 2 * Math.PI)
   ctx.fillStyle = '#faa'
-  ctx.filter = "blur(64px)";
+  ctx.filter = `blur(${64 * size / 512}px)`
   ctx.fill()
 
   ctx.restore()
 
-  ctx.beginPath()
-  ctx.lineWidth = 0.02
-  ctx.strokeStyle = 'red'
-  outline.forEach(({ x, y }, i) => i == 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y))
-  ctx.closePath()
-  ctx.stroke()
+  ;[upShadow, downShadow].forEach((shadow, i) => {
+    if (!shadow) return
+    ctx.save()
+    ctx.translate(-15 / 16, 0)
+    ctx.rotate(2 * Math.PI / 5 * (2 * i - 1))
+    ctx.translate(15 / 16, 0)
+    ctx.fillStyle = 'black'
+    outlinePath()
+    ctx.globalAlpha = 0.5
+    ctx.filter = `blur(${8 * size / 512}px)`
+    ctx.fill()
+    ctx.restore()
+  })
+  ctx.restore()
+}
 
-  ctx.beginPath()
-  ctx.filter = ''
-  const gradient = ctx.createLinearGradient(-1, -1, -1, 1)
+export function createShadowedSakuraTexture(size: number) {
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size
+  const ctx = canvas.getContext('2d')!
+  ctx.save()
+  ctx.scale(size, size)
+  for (let i = 0; i < 4; i++) {
+    ctx.save()
+    ctx.translate(1 / 4 + i % 2 / 2, 1 / 4 + (i - i % 2) / 4)
+    ctx.scale(1 / 4, 1 / 4)
+    ctx.beginPath()
+    ctx.rect(-1, -1, 3, 2)
+    ctx.clip()
+    renderSakura(ctx, size / 2, i % 2 === 1, i >= 2)
+    ctx.restore()
+  }
+  ctx.restore()
+  const gradient = ctx.createLinearGradient(0, 0, size, 0)
   gradient.addColorStop(0, '#f66')
   gradient.addColorStop(7 / 8, '#8d4')
   gradient.addColorStop(1, 'black')
   ctx.fillStyle = gradient
-  ctx.fillRect(-1, -1, 1 / 16, 2)
-  canvas.style.boxShadow = '0 0 1px red'
+  ctx.fillRect(0, 0, size, size / 64)
+  return canvas
+}
+
+export function createSakuraTexture(size: number) {
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size
+  const ctx = canvas.getContext('2d')!
+  ctx.scale(size, size)
+  ctx.scale(0.5, 0.5)
+  ctx.translate(1, 1)
+  renderSakura(ctx, size)
   return canvas
 }
 
@@ -194,4 +226,6 @@ export const TriangleLevels = [
   sakuraTriangles(6, 10, 24)
 ] as const
 
-;(window as any).foo = TriangleLevels
+const canvas = createShadowedSakuraTexture(512)
+canvas.style.boxShadow = '0 0 1px red'
+window.addEventListener('load', () => document.body.appendChild(canvas))
