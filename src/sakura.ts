@@ -232,7 +232,3 @@ export const TriangleLevels = [
   sakuraTriangles(3, 5, 12),
   sakuraTriangles(6, 10, 24)
 ] as const
-
-const canvas = createShadowedSakuraTexture(512)
-canvas.style.boxShadow = '0 0 1px red'
-window.addEventListener('load', () => document.body.appendChild(canvas))
