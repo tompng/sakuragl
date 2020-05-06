@@ -52,7 +52,7 @@ function updateCamera() {
 }
 
 
-import { generateGeometry } from './Flower'
+import { generateGeometry, bouquetParams } from './Flower'
 import { TriangleLevels, createShadowedSakuraTexture } from './sakura'
 import vertexShader from './shaders/flower.vert'
 import fragmentShader from './shaders/flower.frag'
@@ -68,10 +68,15 @@ const material = new THREE.ShaderMaterial({
   uniforms: { texture: { value: texture } },
   side: THREE.DoubleSide
 })
-const mesh = new THREE.Mesh(geometry, material)
-mesh.scale.x=mesh.scale.y=mesh.scale.z=0.02
-mesh.position.z = 1
-scene.add(mesh)
+
+
+bouquetParams(100).forEach(p => {
+  const mesh = new THREE.Mesh(geometry, material)
+  mesh.scale.x = mesh.scale.y = mesh.scale.z = 0.02
+  mesh.rotateOnAxis(new THREE.Vector3(Math.sin(p.xyrot), -Math.cos(p.xyrot), 0), p.zrot)
+  mesh.position.z = 1
+  scene.add(mesh)
+})
 
 
 const light = new DirectionalLight(0xffffff, 1)

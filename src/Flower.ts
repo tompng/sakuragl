@@ -24,6 +24,7 @@ export function generateGeometry(attrs: FlowerAttrs, triangles: Triangle2D[], ro
   const coordOffsets: number[] = []
   const zlevels = [-2, 0, 2, -1, 1]
   const geometry = new BufferGeometry()
+  const stemLength = 4
   for (let i = 0; i < 5; i++) {
     const zlevel = zlevels[i]
     const rotcos = Math.cos(Math.PI * 2 * i / 5 + rot)
@@ -52,7 +53,7 @@ export function generateGeometry(attrs: FlowerAttrs, triangles: Triangle2D[], ro
       const y2 = r2 * y / r
       const x3 = x2 * rotcos - y2 * rotsin
       const y3 = x2 * rotsin + y2 * rotcos
-      return [x3, y3, z2 - 1 / 32] as const
+      return [x3, y3, z2 - 1 / 32 + stemLength] as const
 
     }
     const normal = ({ x, y }: Point2D) => {
@@ -89,13 +90,17 @@ export function generateGeometry(attrs: FlowerAttrs, triangles: Triangle2D[], ro
     return [r, 1 / l, -r / l]
   }
   const stemBend = 0.5
-  const stemZFrom = -3
+  const bendT = 2 * Math.PI * Math.random()
+  const bendX = stemBend * Math.cos(bendT)
+  const bendY = stemBend * Math.sin(bendT)
+  const stemZFrom = -stemLength
   const addStemPoint = (th: number, z: number) => {
     const [r, nr, nz] = rparam(z)
     const cos = Math.cos(th)
     const sin = Math.sin(th)
     coordOffsets.push(0, 0)
-    positions.push(r * cos -stemBend * z * (z - stemZFrom) / stemZFrom / stemZFrom, r * sin, z)
+    const b = z * (z - stemZFrom) / stemZFrom / stemZFrom
+    positions.push(r * cos + bendX * b, r * sin + bendY * b, z + stemLength)
     coords.push(z > 0 ? 0 : z ** 2 / 9, 1)
     normals.push(nr * cos, nr * sin, nz)
   }
@@ -142,10 +147,10 @@ export function generateGeometry(attrs: FlowerAttrs, triangles: Triangle2D[], ro
       const r2 = r * (rmin + rrange * (t2 + t2 * (1 - t2) / 2))
       const x1 = cos * r1
       const y1 = sin * r1
-      const z1 = len * t1 + zoffset
+      const z1 = len * t1 + zoffset + stemLength
       const x2 = cos * r2
       const y2 = sin * r2
-      const z2 = len * t2 + zoffset
+      const z2 = len * t2 + zoffset + stemLength
       add(x1 - lc, y1 - ls, z1, t1)
       add(x1 + lc, y1 + ls, z1, t1)
       add(x2 + lc, y2 + ls, z2, t2)
@@ -166,4 +171,33 @@ export function generateGeometry(attrs: FlowerAttrs, triangles: Triangle2D[], ro
   geometry.setAttribute('uv', new BufferAttribute(new Float32Array(coords), 2))
   geometry.setAttribute('offset', new BufferAttribute(new Int8Array(coordOffsets), 2))
   return geometry
+}
+
+type BouquetParam = { x: number; y: number; z: number, xyrot: number, zrot: number }
+export function bouquetParams(n: number, theta: number = Math.PI / 3, dtheta: number = Math.PI / 5, ntheta: number = Math.PI / 3) {
+  const points: BouquetParam[] = []
+  const zmin = Math.cos(theta)
+  function randPoint() {
+    const z = zmin + (1 - zmin) * Math.random()
+    const xyrot = 2 * Math.PI * Math.random()
+    const r = Math.sqrt(1 - z ** 2)
+    const zrot = Math.acos(z)
+    return { x: r * Math.cos(xyrot), y: r * Math.sin(xyrot), z, xyrot, zrot }
+  }
+  const dotMax = Math.cos(dtheta)
+  const dotNear = Math.cos(ntheta)
+  points.push(randPoint())
+  let failCount = 0
+  while (points.length < n) {
+    const p = randPoint()
+    const count = points.filter(q => p.x * q.x + p.y * q.y + p.z * q.z > dotNear).length
+    if (points.every(q => p.x * q.x + p.y * q.y + p.z * q.z < dotMax) && count >= (points.length === 1 ? 1 : 2)) {
+      points.push(p)
+      failCount = 0
+    } else {
+      failCount++
+      if (failCount > 32) break
+    }
+  }
+  return points
 }
