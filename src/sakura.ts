@@ -58,11 +58,11 @@ export function sakuraTriangles(nRadial: number, nInner: number, nOuter: number 
     const tmp: any[] = []
     while (true) {
       if (a + 1 < outer.length && (b + 1 >= inner.length || (a + 1) / (outer.length - 1) < (b + 1) / (inner.length - 1))) {
-        triangles.push([outer[a], inner[b], outer[a + 1]])
+        triangles.push([inner[b], outer[a], outer[a + 1]])
         tmp.push({ a1: a, a2: a + 1, b })
         a += 1
       } else if (b + 1 < inner.length) {
-        triangles.push([inner[b], inner[b + 1], outer[a]])
+        triangles.push([inner[b + 1], inner[b], outer[a]])
         tmp.push({ a, b1: b, b2: b + 1 })
         b += 1
       } else {

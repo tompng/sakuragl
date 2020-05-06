@@ -71,12 +71,9 @@ export function generateGeometry(attrs: FlowerAttrs, triangles: Triangle2D[], ro
     }
     const upShadow = zlevels[(i + 1) % 5] > zlevel
     const downShadow = zlevels[(i + 4) % 5] > zlevel
-    const coord = ({ x, y }: Point2D) => {
-      return [(x + 1) / 4 + (upShadow ? 1 : 0) / 2, (y + 1) / 4 + (downShadow ? 0 : 1) / 2]
-      // return [(x + 1) / 2, (y + 1) / 2]
-    }
+    const coord = ({ x, y }: Point2D) => [(x + 2) / 4, (y + 2) / 4]
+    const offset = [upShadow ? 1 : -1, downShadow ? -1 : 1]
     for (const [a, b, c] of triangles) {
-      const offset = [upShadow ? 1 : 0, downShadow ? 0 : 1]
       coordOffsets.push(...offset, ...offset, ...offset)
       positions.push(...position(a), ...position(b), ...position(c))
       normals.push(...normal(a), ...normal(b), ...normal(c))

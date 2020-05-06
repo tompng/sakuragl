@@ -54,13 +54,20 @@ function updateCamera() {
 
 import { generateGeometry } from './Flower'
 import { TriangleLevels, createShadowedSakuraTexture } from './sakura'
+import vertexShader from './shaders/flower.vert'
+import fragmentShader from './shaders/flower.frag'
 const texture = new THREE.Texture(createShadowedSakuraTexture(512))
 texture.magFilter = THREE.LinearFilter
 texture.minFilter = THREE.LinearFilter
 texture.format = THREE.RGBFormat
 texture.needsUpdate = true
 const geometry = generateGeometry([...new Array(30)].map(() => 2 * Math.random() - 1), TriangleLevels[3])
-const material = new THREE.MeshBasicMaterial({ color: '#fff', map: texture, side: THREE.DoubleSide })
+const material = new THREE.ShaderMaterial({
+  vertexShader,
+  fragmentShader,
+  uniforms: { texture: { value: texture } },
+  side: THREE.DoubleSide
+})
 const mesh = new THREE.Mesh(geometry, material)
 mesh.position.z = 1
 scene.add(mesh)
