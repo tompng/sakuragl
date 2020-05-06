@@ -52,7 +52,7 @@ export function generateGeometry(attrs: FlowerAttrs, triangles: Triangle2D[], ro
       const y2 = r2 * y / r
       const x3 = x2 * rotcos - y2 * rotsin
       const y3 = x2 * rotsin + y2 * rotcos
-      return [x3, y3, z2] as const
+      return [x3, y3, z2 - 1 / 32] as const
 
     }
     const normal = ({ x, y }: Point2D) => {
@@ -78,6 +78,43 @@ export function generateGeometry(attrs: FlowerAttrs, triangles: Triangle2D[], ro
       positions.push(...position(a), ...position(b), ...position(c))
       normals.push(...normal(a), ...normal(b), ...normal(c))
       coords.push(...coord(a), ...coord(b), ...coord(c))
+    }
+  }
+  const rparam = (z: number) => {
+    const e = Math.exp(-16 * (z + 1))
+    const e2 = Math.exp(8 * z)
+    const r = (z + 6) / 80 + 1 / (1 + e) / 8 + e2 / 8
+    const d = 1 / 80 + 2 * e / (1 + e) ** 2 + e2
+    const l = Math.sqrt(1 + d ** 2)
+    return [r, 1 / l, -r / l]
+  }
+  const add = (th: number, z: number) => {
+    const [r, nr, nz] = rparam(z)
+    const cos = Math.cos(th)
+    const sin = Math.sin(th)
+    coordOffsets.push(0, 0)
+    positions.push(r * cos, r * sin, z)
+    coords.push(z > 0 ? 0 : z ** 2 / 9, 1)
+    normals.push(nr * cos, nr * sin, nz)
+    console.log(nr ,cos, sin, nz)
+  }
+  const z = (t: number, m: number) => {
+    return -3 + 3 * (5 * t / (1 + 4 * t)) + m * t / 8
+  }
+  for (let i = 0; i < 10; i++) {
+    const th1 = 2 * Math.PI * i / 10 + rot
+    const th2 = 2 * Math.PI * (i + 1) / 10 + rot
+    for (let j = 0; j < 10; j++) {
+      const t1 = j / 10
+      const t2 = (j + 1) / 10
+      const m1 = i % 2
+      const m2 = 1 - m1
+      add(th1, z(t1, m1))
+      add(th2, z(t1, m2))
+      add(th2, z(t2, m2))
+      add(th1, z(t1, m1))
+      add(th2, z(t2, m2))
+      add(th1, z(t2, m1))
     }
   }
   geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))

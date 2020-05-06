@@ -171,11 +171,11 @@ export function renderSakura(ctx: CanvasRenderingContext2D, size: number, upShad
     ctx.save()
     ctx.translate(-15 / 16, 0)
     ctx.rotate(2 * Math.PI / 5 * (2 * i - 1))
-    ctx.translate(15 / 16, 0)
+    ctx.translate(1, 0)
     ctx.fillStyle = 'black'
     outlinePath()
-    ctx.globalAlpha = 0.5
-    ctx.filter = `blur(${8 * size / 512}px)`
+    ctx.globalAlpha = 0.25
+    ctx.filter = `blur(${16 * size / 512}px)`
     ctx.fill()
     ctx.restore()
   })
@@ -200,9 +200,9 @@ export function createShadowedSakuraTexture(size: number) {
   }
   ctx.restore()
   const gradient = ctx.createLinearGradient(0, 0, size, 0)
-  gradient.addColorStop(0, '#f66')
-  gradient.addColorStop(7 / 8, '#8d4')
-  gradient.addColorStop(1, 'black')
+  gradient.addColorStop(0, '#d44')
+  gradient.addColorStop(1 / 4, '#882')
+  gradient.addColorStop(1, '#241')
   ctx.fillStyle = gradient
   ctx.fillRect(0, 0, size, size / 64)
   return canvas
