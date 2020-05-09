@@ -177,8 +177,9 @@ export function generateGeometry({ triangles, innerCount, innerLevel, stemLevel,
     const th1 = 2 * Math.PI * i / stemRLevel + rot
     const th2 = 2 * Math.PI * (i + 1) / stemRLevel + rot
     for (let j = 0; j < stemLevel; j++) {
-      const t1 = j / stemLevel
-      const t2 = (j + 1) / stemLevel
+      const tratio = stemRLevel >= 10 ? 1 : 0.9
+      const t1 = j / stemLevel * tratio
+      const t2 = (j + 1) / stemLevel * tratio
       const m1 = i % 2
       const m2 = 1 - m1
       addStemPoint(th1, stemZ(t1, m1))
