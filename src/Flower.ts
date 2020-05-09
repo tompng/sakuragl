@@ -12,24 +12,92 @@ import {
 import * as THREE from 'three'
 import { Point2D, Triangle2D, TriangleLevels, createSakuraTexture } from './sakura'
 
-type FlowerAttrs = number[]
 const sakuraTranslateX = 15 / 16
 const deg = 20
 const flwcos = Math.cos(Math.PI * deg / 180)
 const flwsin = Math.sin(Math.PI * deg / 180)
-export function generateGeometry(attrs: FlowerAttrs, triangles: Triangle2D[], rot: number = 0) {
+export function generateRands() {
+  return [...new Array(160)].map(() => Math.random())
+}
+type FlowerParams = {
+  triangles: Triangle2D[] | null
+  innerCount: number
+  innerLevel: number
+  stemLevel: number
+  stemRLevel: number
+}
+
+
+export const FlowerLevels: FlowerParams[] = [
+  {
+    triangles: null,
+    innerCount: 0,
+    innerLevel: 0,
+    stemLevel: 0,
+    stemRLevel: 0
+  },
+  {
+    triangles: TriangleLevels[0],
+    innerCount: 0,
+    innerLevel: 0,
+    stemLevel: 0,
+    stemRLevel: 0
+  },
+  {
+    triangles: TriangleLevels[1],
+    innerCount: 0,
+    innerLevel: 0,
+    stemLevel: 1,
+    stemRLevel: 3
+  },
+  {
+    triangles: TriangleLevels[2],
+    innerCount: 16,
+    innerLevel: 1,
+    stemLevel: 5,
+    stemRLevel: 3
+  },
+  {
+    triangles: TriangleLevels[3],
+    innerCount: 32,
+    innerLevel: 4,
+    stemLevel: 10,
+    stemRLevel: 10
+  },
+]
+
+export function generateGeometry({ triangles, innerCount, innerLevel, stemLevel, stemRLevel }: FlowerParams, rands: number[]) {
   const positions: number[] = []
   const normals: number[] = []
   const coords: number[] = []
   const coordOffsets: number[] = []
   const zlevels = [-2, 0, 2, -1, 1]
   const geometry = new BufferGeometry()
-  const stemLength = 4
+  let randIndex = 0
+  const rand = () => rands[randIndex++]
+  const sliceRand = (n: number) => rands.slice(randIndex, randIndex += n)
+  const stemLength = 3.5 + rand()
+  const rot = 2 * Math.PI * rand()
+  if (!triangles) {
+    const offset = [0, 0]
+    const coord = [0.25, 0.25]
+    const normal = [0, 0, 1]
+    const r = 1.8
+    const position = (i: number) => {
+      const th = 2 * Math.PI * i / 3 + rot
+      return [r * Math.cos(th), r * Math.sin(th), stemLength]
+    }
+    coordOffsets.push(...offset, ...offset, ...offset)
+    positions.push(...position(0), ...position(1), ...position(2))
+    normals.push(...normal, ...normal, ...normal)
+    coords.push(...coord, ...coord, ...coord)
+  }
   for (let i = 0; i < 5; i++) {
+    if (!triangles) continue
     const zlevel = zlevels[i]
     const rotcos = Math.cos(Math.PI * 2 * i / 5 + rot)
     const rotsin = Math.sin(Math.PI * 2 * i / 5 + rot)
-    const [cx1, cy1, rz1, cx2, cy2, rz2] = attrs.slice(6 * i, 6 * i + 6)
+    const [cx1, cy1, rz1, cx2, cy2, rz2] = sliceRand(6).map(x => 2 * x - 1)
     const cc1 = Math.PI * rz1
     const cc2 = Math.PI * rz2
     const fz = ({ x, y }: Point2D) => {
@@ -87,12 +155,10 @@ export function generateGeometry(attrs: FlowerAttrs, triangles: Triangle2D[], ro
     const r = (z + 6) / 80 + 1 / (1 + e) / 8 + e2 / 8
     const d = 1 / 80 + 2 * e / (1 + e) ** 2 + e2
     const l = Math.sqrt(1 + d ** 2)
-    return [r, 1 / l, -r / l]
+    const r2 = stemLevel <= 2 ? r / (4 - stemLevel) : r
+    return [r2, 1 / l, -r2 / l]
   }
   const stemBend = 0.5
-  const bendT = 2 * Math.PI * Math.random()
-  const bendX = stemBend * Math.cos(bendT)
-  const bendY = stemBend * Math.sin(bendT)
   const stemZFrom = -stemLength
   const addStemPoint = (th: number, z: number) => {
     const [r, nr, nz] = rparam(z)
@@ -100,19 +166,19 @@ export function generateGeometry(attrs: FlowerAttrs, triangles: Triangle2D[], ro
     const sin = Math.sin(th)
     coordOffsets.push(0, 0)
     const b = z * (z - stemZFrom) / stemZFrom / stemZFrom
-    positions.push(r * cos + bendX * b, r * sin + bendY * b, z + stemLength)
+    positions.push(r * cos + stemBend * b, r * sin, z + stemLength)
     coords.push(z > 0 ? 0 : z ** 2 / 9, 1)
     normals.push(nr * cos, nr * sin, nz)
   }
   const stemZ = (t: number, m: number) => {
     return stemZFrom - stemZFrom * (5 * t / (1 + 4 * t)) + m * t / 8
   }
-  for (let i = 0; i < 10; i++) {
-    const th1 = 2 * Math.PI * i / 10 + rot
-    const th2 = 2 * Math.PI * (i + 1) / 10 + rot
-    for (let j = 0; j < 10; j++) {
-      const t1 = j / 10
-      const t2 = (j + 1) / 10
+  for (let i = 0; i < stemRLevel; i++) {
+    const th1 = 2 * Math.PI * i / stemRLevel + rot
+    const th2 = 2 * Math.PI * (i + 1) / stemRLevel + rot
+    for (let j = 0; j < stemLevel; j++) {
+      const t1 = j / stemLevel
+      const t2 = (j + 1) / stemLevel
       const m1 = i % 2
       const m2 = 1 - m1
       addStemPoint(th1, stemZ(t1, m1))
@@ -123,15 +189,15 @@ export function generateGeometry(attrs: FlowerAttrs, triangles: Triangle2D[], ro
       addStemPoint(th1, stemZ(t2, m1))
     }
   }
-  for (let i = 0 ;i < 32; i++) {
-    const th = 2 * Math.PI * i / 32 + Math.random() / 40
+  for (let i = 0 ;i < innerCount; i++) {
+    const th = 2 * Math.PI * (i * 7 % 32) / 32 + rand() / 40
     const cos = Math.cos(th)
     const sin = Math.sin(th)
-    const r = Math.sqrt(Math.random())
-    const lth = 2 * Math.PI * Math.random()
+    const r = Math.sqrt(rand())
+    const lth = 2 * Math.PI * rand()
     const rmin = 1 / 16
     const rrange = 1 / 3
-    const len = 1 / 2 + Math.random() / 6
+    const len = 1 / 2 + rand() / 6
     const lw = 1 / 64
     const lc = lw * Math.cos(lth) / 2
     const ls = lw * Math.sin(lth) / 2
@@ -164,7 +230,7 @@ export function generateGeometry(attrs: FlowerAttrs, triangles: Triangle2D[], ro
       add(x2 - ls, y2 + lc, z2, t2)
       add(x2 + ls, y2 - lc, z2, t2)
     }
-    for (let j = 0; j < 4; j++) line(j / 4, (j + 1) / 4)
+    for (let j = 0; j < innerLevel; j++) line(j / innerLevel, (j + 1) / innerLevel)
   }
   geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
   geometry.setAttribute('normal', new BufferAttribute(new Float32Array(normals), 3))

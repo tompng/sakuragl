@@ -52,8 +52,8 @@ function updateCamera() {
 }
 
 
-import { generateGeometry, bouquetParams } from './Flower'
-import { TriangleLevels, createShadowedSakuraTexture } from './sakura'
+import { generateRands, generateGeometry, FlowerLevels, bouquetParams } from './Flower'
+import { createShadowedSakuraTexture } from './sakura'
 import vertexShader from './shaders/flower.vert'
 import fragmentShader from './shaders/flower.frag'
 const texture = new THREE.Texture(createShadowedSakuraTexture(512))
@@ -61,21 +61,27 @@ texture.magFilter = THREE.LinearFilter
 texture.minFilter = THREE.LinearFilter
 texture.format = THREE.RGBFormat
 texture.needsUpdate = true
-const geometry = generateGeometry([...new Array(30)].map(() => 2 * Math.random() - 1), TriangleLevels[3])
+const rands = generateRands()
+
+
 const material = new THREE.ShaderMaterial({
   vertexShader,
   fragmentShader,
   uniforms: { texture: { value: texture } },
   side: THREE.DoubleSide
 })
+const bparams = bouquetParams(100)
 
-
-bouquetParams(100).forEach(p => {
-  const mesh = new THREE.Mesh(geometry, material)
-  mesh.scale.x = mesh.scale.y = mesh.scale.z = 0.02
-  mesh.rotateOnAxis(new THREE.Vector3(Math.sin(p.xyrot), -Math.cos(p.xyrot), 0), p.zrot)
-  mesh.position.z = 1
-  scene.add(mesh)
+FlowerLevels.forEach((flevel, i) => {
+  const geometry = generateGeometry(flevel, rands)
+  bparams.forEach(p => {
+    const mesh = new THREE.Mesh(geometry, material)
+    mesh.scale.x = mesh.scale.y = mesh.scale.z = 0.02
+    mesh.rotateOnAxis(new THREE.Vector3(Math.sin(p.xyrot), -Math.cos(p.xyrot), 0), p.zrot)
+    mesh.position.z = 1
+    mesh.position.x = i / 5
+    scene.add(mesh)
+  })
 })
 
 

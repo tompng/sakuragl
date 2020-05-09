@@ -25,7 +25,7 @@ export function sakuraHalfOutline(n: number): Point2D[] {
 
 export function sakuraOutline(n: number): Point2D[] {
   const coords = sakuraHalfOutline(n)
-  for (let i = n - 2; i >= 0; i--) {
+  for (let i = n - 1; i > 0; i--) {
     const { x, y } = coords[i]
     coords.push({ x, y: -y })
   }
@@ -226,9 +226,11 @@ export function createSakuraTexture(size: number) {
   return canvas
 }
 
-export const TriangleLevels = [
-  sakuraOutlineTriangles(2),
+const T2A: Triangle2D = [{ x: 0.8, y: 0 }, { x: 0.1, y: 0.8 }, { x: -8 / 9, y: 0 }]
+const T2B: Triangle2D = [T2A[2], { x: T2A[1].x, y: -T2A[1].y }, T2A[0]]
+export const TriangleLevels: [Triangle2D[], Triangle2D[], Triangle2D[], Triangle2D[]] = [
+  [T2A, T2B],
   sakuraOutlineTriangles(5),
   sakuraTriangles(3, 5, 12),
   sakuraTriangles(6, 10, 24)
-] as const
+]
