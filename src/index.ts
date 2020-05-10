@@ -52,7 +52,7 @@ function updateCamera() {
 }
 
 
-import { generateRands, generateGeometry, FlowerLevels, bouquetParams } from './Flower'
+import { generateBouquets, generateGeometry } from './Flower'
 import { createShadowedSakuraTexture } from './sakura'
 import vertexShader from './shaders/flower.vert'
 import fragmentShader from './shaders/flower.frag'
@@ -61,7 +61,7 @@ texture.magFilter = THREE.LinearFilter
 texture.minFilter = THREE.LinearFilter
 texture.format = THREE.RGBFormat
 texture.needsUpdate = true
-const rands = generateRands()
+const bouquets = generateBouquets(4)
 
 
 const material = new THREE.ShaderMaterial({
@@ -70,16 +70,15 @@ const material = new THREE.ShaderMaterial({
   uniforms: { texture: { value: texture } },
   side: THREE.DoubleSide
 })
-const bparams = bouquetParams(100)
 
-FlowerLevels.forEach((flevel, i) => {
-  const geometry = generateGeometry(flevel, rands)
-  bparams.forEach(p => {
+bouquets.forEach((levels, i) => {
+  levels.forEach((attrs, j) => {
+    const geometry = generateGeometry(attrs)
     const mesh = new THREE.Mesh(geometry, material)
     mesh.scale.x = mesh.scale.y = mesh.scale.z = 0.02
-    mesh.rotateOnAxis(new THREE.Vector3(Math.sin(p.xyrot), -Math.cos(p.xyrot), 0), p.zrot)
     mesh.position.z = 1
     mesh.position.x = i / 5
+    mesh.position.y = j / 5
     scene.add(mesh)
   })
 })

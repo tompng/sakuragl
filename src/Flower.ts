@@ -12,6 +12,8 @@ import {
 import * as THREE from 'three'
 import { Point2D, Triangle2D, TriangleLevels, createSakuraTexture } from './sakura'
 
+type Point3D = { x: number; y: number; z: number }
+
 const sakuraTranslateX = 15 / 16
 const deg = 20
 const flwcos = Math.cos(Math.PI * deg / 180)
@@ -66,17 +68,23 @@ export const FlowerLevels: FlowerParams[] = [
   },
 ]
 
-export function generateGeometry({ triangles, innerCount, innerLevel, stemLevel, stemRLevel }: FlowerParams, rands: number[]) {
+type FlowerAttributes = {
+  positions: number[]
+  normals: number[]
+  coords: number[]
+  coordOffsets: number[]
+}
+
+export function generateAttributes({ triangles, innerCount, innerLevel, stemLevel, stemRLevel }: FlowerParams, rands: number[]): FlowerAttributes {
   const positions: number[] = []
   const normals: number[] = []
   const coords: number[] = []
   const coordOffsets: number[] = []
   const zlevels = [-2, 0, 2, -1, 1]
-  const geometry = new BufferGeometry()
   let randIndex = 0
   const rand = () => rands[randIndex++]
   const sliceRand = (n: number) => rands.slice(randIndex, randIndex += n)
-  const stemLength = 3.5 + rand()
+  const stemLength = 3.5 + 0.5 * rand()
   const rot = 2 * Math.PI * rand()
   if (!triangles) {
     const offset = [0, 0]
@@ -233,6 +241,11 @@ export function generateGeometry({ triangles, innerCount, innerLevel, stemLevel,
     }
     for (let j = 0; j < innerLevel; j++) line(j / innerLevel, (j + 1) / innerLevel)
   }
+  return { positions, normals, coords, coordOffsets }
+}
+
+export function generateGeometry({ positions, normals, coords, coordOffsets }: FlowerAttributes) {
+  const geometry = new BufferGeometry()
   geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
   geometry.setAttribute('normal', new BufferAttribute(new Float32Array(normals), 3))
   geometry.setAttribute('uv', new BufferAttribute(new Float32Array(coords), 2))
@@ -240,9 +253,67 @@ export function generateGeometry({ triangles, innerCount, innerLevel, stemLevel,
   return geometry
 }
 
+export function cloneAttributes(attributes: FlowerAttributes) {
+  return {
+    positions: [...attributes.positions],
+    normals: [...attributes.normals],
+    coords: [...attributes.coords],
+    coordOffsets: [...attributes.coordOffsets]
+  }
+}
+
+export function mergeAttributes(base: FlowerAttributes, adds: FlowerAttributes) {
+  base.positions.push(...adds.positions)
+  base.normals.push(...adds.normals)
+  base.coords.push(...adds.coords)
+  base.coordOffsets.push(...adds.coordOffsets)
+}
+
+export function transformAttributes(attributes: FlowerAttributes, transform: { axis?: Point3D, angle?: number, translate?: Point3D }) {
+  const { positions, normals } = attributes
+  const { axis, angle, translate } = transform
+  if (axis) {
+    let { x: ax, y: ay, z: az } = axis
+    const ar = Math.sqrt(ax ** 2 + ay ** 2 + az ** 2)
+    ax /= ar
+    ay /= ar
+    az /= ar
+    const theta = angle === undefined ? ar : angle
+    const cos = Math.cos(theta)
+    const sin = Math.sin(theta)
+    const rotate = (array: number[]) => {
+      for (let i = 0; i < array.length; i+= 3) {
+        let x = array[i]
+        let y = array[i + 1]
+        let z = array[i + 2]
+        const dot = x * ax + y * ay + z * az
+        x -= dot * ax
+        y -= dot * ay
+        z -= dot * az
+        const bx = y * az - z * ay
+        const by = z * ax - x * az
+        const bz = x * ay - y * ax
+        array[i] = dot * ax + x * cos - bx * sin
+        array[i + 1] = dot * ay + y * cos - by * sin
+        array[i + 2] = dot * az + z * cos - bz * sin
+      }
+    }
+    rotate(positions)
+    rotate(normals)
+  }
+  if (translate) {
+    const { x, y, z } = translate
+    for (let i = 0; i < positions.length; i+= 3) {
+      positions[i] += x
+      positions[i + 1] += y
+      positions[i + 2] += z
+    }
+  }
+}
+
 type BouquetParam = { x: number; y: number; z: number, xyrot: number, zrot: number }
-export function bouquetParams(n: number, theta: number = Math.PI * 2 / 5, dtheta: number = Math.PI / 4) {
-  const points: { x: number, y: number, z: number }[] = []
+export function bouquetParams(n: number, theta: number = Math.PI * 2 / 5, dtheta: number = Math.PI / 4): BouquetParam[] {
+  const points: Point3D[] = []
   const randratio = 1.2
   const dlength = 2 * Math.sin(dtheta / 2)
   let zn = Math.floor(Math.PI / dtheta * randratio)
@@ -277,5 +348,35 @@ export function bouquetParams(n: number, theta: number = Math.PI * 2 / 5, dtheta
     const x = p.x * cosz - _y * sinz
     const y = p.x * sinz + _y * cosz
     return { x, y, z, xyrot: Math.atan2(x, y), zrot: Math.acos(z) }
-  }).filter(p => p.zrot < theta)
+  }).filter(p => p.zrot < theta).slice(0, n)
+}
+
+export function generateBouquets(n: number) {
+  const randsList = [...new Array(16)].map(generateRands)
+  const flowerAttributeLevels = FlowerLevels.map(params =>
+    randsList.map(rands => generateAttributes(params, rands))
+  )
+  return [...new Array(n)].map(() => {
+    const bparams = bouquetParams(6 + 4 * Math.random())
+    const flowerIndices = bparams.map(() => Math.floor(randsList.length * Math.random()))
+    return FlowerLevels.map((_, level) => {
+      const attributes: FlowerAttributes = {
+        normals: [],
+        positions: [],
+        coords: [],
+        coordOffsets: []
+      }
+      bparams.forEach((bparam, i) => {
+        const attrs = cloneAttributes(flowerAttributeLevels[level][flowerIndices[i]])
+        transformAttributes(attrs,
+          {
+            axis: { x: -Math.sin(bparam.xyrot), y: Math.cos(bparam.xyrot), z: 0 },
+            angle: bparam.zrot
+          }
+        )
+        mergeAttributes(attributes, attrs)
+      })
+      return attributes
+    })
+  })
 }
