@@ -1,16 +1,8 @@
 import {
-  Scene,
-  Camera,
   BufferGeometry,
   BufferAttribute,
-  ShaderMaterial,
-  Points,
-  Mesh,
-  Texture,
-  AdditiveBlending
 } from 'three'
-import * as THREE from 'three'
-import { Point2D, Triangle2D, TriangleLevels, createSakuraTexture } from './sakura'
+import { Point2D, Triangle2D, TriangleLevels } from './sakura'
 
 type Point3D = { x: number; y: number; z: number }
 
@@ -269,7 +261,7 @@ export function mergeAttributes(base: FlowerAttributes, adds: FlowerAttributes) 
   base.coordOffsets.push(...adds.coordOffsets)
 }
 
-export function transformAttributes(attributes: FlowerAttributes, transform: { axis?: Point3D, angle?: number, translate?: Point3D }) {
+export function transformAttributes(attributes: { positions: number[], normals: number[] }, transform: { axis?: Point3D, angle?: number, translate?: Point3D }) {
   const { positions, normals } = attributes
   const { axis, angle, translate } = transform
   if (axis) {

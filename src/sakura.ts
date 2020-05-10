@@ -202,7 +202,8 @@ export function createShadowedSakuraTexture(size: number) {
   const stemGradient = ctx.createLinearGradient(0, 0, size, 0)
   stemGradient.addColorStop(0, '#d44')
   stemGradient.addColorStop(1 / 4, '#882')
-  stemGradient.addColorStop(1, '#241')
+  stemGradient.addColorStop(7 / 8, '#241')
+  stemGradient.addColorStop(1, '#221')
   ctx.fillStyle = stemGradient
   ctx.fillRect(0, 0, size, size / 64)
 
