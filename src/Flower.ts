@@ -241,30 +241,41 @@ export function generateGeometry({ triangles, innerCount, innerLevel, stemLevel,
 }
 
 type BouquetParam = { x: number; y: number; z: number, xyrot: number, zrot: number }
-export function bouquetParams(n: number, theta: number = Math.PI / 3, dtheta: number = Math.PI / 5, ntheta: number = Math.PI / 3) {
-  const points: BouquetParam[] = []
-  const zmin = Math.cos(theta)
-  function randPoint() {
-    const z = zmin + (1 - zmin) * Math.random()
-    const xyrot = 2 * Math.PI * Math.random()
-    const r = Math.sqrt(1 - z ** 2)
-    const zrot = Math.acos(z)
-    return { x: r * Math.cos(xyrot), y: r * Math.sin(xyrot), z, xyrot, zrot }
-  }
-  const dotMax = Math.cos(dtheta)
-  const dotNear = Math.cos(ntheta)
-  points.push(randPoint())
-  let failCount = 0
-  while (points.length < n) {
-    const p = randPoint()
-    const count = points.filter(q => p.x * q.x + p.y * q.y + p.z * q.z > dotNear).length
-    if (points.every(q => p.x * q.x + p.y * q.y + p.z * q.z < dotMax) && count >= (points.length === 1 ? 1 : 2)) {
-      points.push(p)
-      failCount = 0
-    } else {
-      failCount++
-      if (failCount > 32) break
+export function bouquetParams(n: number, theta: number = Math.PI * 2 / 5, dtheta: number = Math.PI / 4) {
+  const points: { x: number, y: number, z: number }[] = []
+  const randratio = 1.2
+  const dlength = 2 * Math.sin(dtheta / 2)
+  let zn = Math.floor(Math.PI / dtheta * randratio)
+  for (let i = 0; i <= zn; i++ ) {
+    const randz = (Math.PI / zn - dtheta) / 2
+    const zthbase = Math.PI * i / zn
+    const zthrange = Math.PI / zn - dtheta
+    const rmin = Math.sin(zthbase < Math.PI ? zthbase - zthrange : zthbase + zthrange)
+    let xyn = 1
+    let xythrange = 0
+    if (dlength / rmin / 2 <= 1) {
+      const drtheta = 2 * Math.asin(dlength / rmin / 2)
+      xyn = Math.floor(2 * Math.PI / drtheta * randratio)
+      xythrange = 2 * Math.PI / xyn - drtheta
+    }
+    const xyth0 = 2 * Math.PI * Math.random()
+    for (let j = 0; j < xyn; j++) {
+      const zth = zthbase + zthrange * (Math.random() - 0.5)
+      const xyth = xyth0 + 2 * Math.PI * j / xyn + xythrange * Math.random()
+      const z = Math.cos(zth)
+      const r = Math.sin(zth)
+      points.push({ x: r * Math.cos(xyth), y: r * Math.sin(xyth), z })
     }
   }
-  return points
+  const rotx = 2 * Math.PI * Math.random()
+  const rotz = 2 * Math.PI * Math.random()
+  const cosx = Math.cos(rotx), sinx = Math.sin(rotx)
+  const cosz = Math.cos(rotz), sinz = Math.sin(rotz)
+  return points.map(p => {
+    const _y = p.y * cosx - p.z * sinx
+    const z = p.y * sinx + p.z * cosx
+    const x = p.x * cosz - _y * sinz
+    const y = p.x * sinz + _y * cosz
+    return { x, y, z, xyrot: Math.atan2(x, y), zrot: Math.acos(z) }
+  }).filter(p => p.zrot < theta)
 }
