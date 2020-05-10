@@ -83,23 +83,32 @@ bouquets.forEach((levels, i) => {
 
 const bouquetGeometries = bouquets.map(levels => levels.map(generateGeometry))
 import { Branch } from './tree'
-const tree = new Branch({x:0,y:0,z:0},{x:0,y:0,z:1},10)
-const positions = tree.positions()
-const geometry = new THREE.BufferGeometry()
-geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3))
-const treeMesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: '#110804', side: THREE.DoubleSide }))
-scene.add(treeMesh)
-const flowers = tree.collectFlowerPositions()
-flowers.forEach(({ start, xyrot, zrot }) => {
-  const geometry = bouquetGeometries[Math.floor(4 * Math.random())][3]
-  const mesh = new THREE.Mesh(geometry, material)
-  mesh.scale.x = mesh.scale.y = mesh.scale.z = 0.02
-  mesh.position.x = start.x
-  mesh.position.y = start.y
-  mesh.position.z = start.z
-  mesh.rotateOnAxis(new THREE.Vector3(-Math.sin(xyrot), Math.cos(xyrot), 0), zrot)
-  scene.add(mesh)
-})
+for (let i = 0; i < 10; i++) {
+  const x = 10 * Math.random()
+  const y = 10 * Math.random()
+  const z = landZ(x, y)
+  const tree = new Branch({ x, y, z },{ x: 0, y: 0, z: 1 }, 10)
+  const positions = tree.positions()
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3))
+  const treeMesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: '#110804', side: THREE.DoubleSide }))
+  scene.add(treeMesh)
+  const flowers = tree.collectFlowerPositions()
+  flowers.forEach(({ start, xyrot, zrot }) => {
+    const levels = bouquetGeometries[Math.floor(4 * Math.random())]
+    const lod = new THREE.LOD()
+    lod.position.x = start.x
+    lod.position.y = start.y
+    lod.position.z = start.z
+    levels.forEach((geometry, i) => {
+      const mesh = new THREE.Mesh(geometry, material)
+      mesh.scale.x = mesh.scale.y = mesh.scale.z = 0.02
+      mesh.rotateOnAxis(new THREE.Vector3(-Math.sin(xyrot), Math.cos(xyrot), 0), zrot)
+      lod.addLevel(mesh, [4,2,0.8,0.2,0][i])
+    })
+    scene.add(lod)
+  })
+}
 
 
 const light = new DirectionalLight(0xffffff, 1)

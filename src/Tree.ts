@@ -23,7 +23,6 @@ function cross(p: Point3D, q: Point3D) {
 }
 
 function randomCross(p: Point3D) {
-  const thz = Math.acos(p.z)
   const cosz = p.z
   const sinz = Math.sqrt(p.x ** 2 + p.y ** 2)
   const cosxy = sinz === 0 ? 1 : p.x / sinz
@@ -32,7 +31,7 @@ function randomCross(p: Point3D) {
   const x = Math.cos(th)
   const y = Math.sin(th)
   const x2 = cosz * x
-  const z2 = sinz * x
+  const z2 = -sinz * x
   const x3 = x2 * cosxy - y * sinxy
   const y2 = x2 * sinxy + y * cosxy
   return { x: x3, y: y2, z: z2 }
