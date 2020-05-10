@@ -60,7 +60,7 @@ export const FlowerLevels: FlowerParams[] = [
   },
 ]
 
-type FlowerAttributes = {
+export type FlowerAttributes = {
   positions: number[]
   normals: number[]
   coords: number[]

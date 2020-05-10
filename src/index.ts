@@ -51,7 +51,6 @@ function updateCamera() {
   camera.position.z = cpos.z
 }
 
-
 import { generateBouquets, generateGeometry } from './Flower'
 import { createShadowedSakuraTexture } from './sakura'
 import vertexShader from './shaders/flower.vert'
@@ -62,7 +61,6 @@ texture.minFilter = THREE.LinearFilter
 texture.format = THREE.RGBFormat
 texture.needsUpdate = true
 const bouquets = generateBouquets(4)
-
 
 const material = new THREE.ShaderMaterial({
   vertexShader,
@@ -77,10 +75,30 @@ bouquets.forEach((levels, i) => {
     const mesh = new THREE.Mesh(geometry, material)
     mesh.scale.x = mesh.scale.y = mesh.scale.z = 0.02
     mesh.position.z = 1
-    mesh.position.x = i / 5
+    mesh.position.x = 2 + i / 5
     mesh.position.y = j / 5
     scene.add(mesh)
   })
+})
+
+const bouquetGeometries = bouquets.map(levels => levels.map(generateGeometry))
+import { Branch } from './tree'
+const tree = new Branch({x:0,y:0,z:0},{x:0,y:0,z:1},10)
+const positions = tree.positions()
+const geometry = new THREE.BufferGeometry()
+geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3))
+const treeMesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: '#110804', side: THREE.DoubleSide }))
+scene.add(treeMesh)
+const flowers = tree.collectFlowerPositions()
+flowers.forEach(({ start, xyrot, zrot }) => {
+  const geometry = bouquetGeometries[Math.floor(4 * Math.random())][3]
+  const mesh = new THREE.Mesh(geometry, material)
+  mesh.scale.x = mesh.scale.y = mesh.scale.z = 0.02
+  mesh.position.x = start.x
+  mesh.position.y = start.y
+  mesh.position.z = start.z
+  mesh.rotateOnAxis(new THREE.Vector3(-Math.sin(xyrot), Math.cos(xyrot), 0), zrot)
+  scene.add(mesh)
 })
 
 
