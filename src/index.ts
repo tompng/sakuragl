@@ -101,7 +101,7 @@ for (let i = 0; i < 16; i++) {
   const tree = new Branch(
     { x, y, z },
     { x: 0, y: 0, z: 1 },
-    Math.floor(5 + 5 * Math.random()),
+    Math.floor(12 + 12 * Math.random()),
     {
       dir: { x: 0, y: 0, z: 1 },
       crs: { x: 1, y: 0, z: 0 },

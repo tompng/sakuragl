@@ -60,12 +60,11 @@ export class Branch {
   sectionDrift: number
   constructor(public start: Point3D, public dir: Point3D, public age: number, public prev: { dir: Point3D, crs: Point3D }, public drift = 0) {
     this.dir = normalize(this.dir)
-    this.dir.z -= 0.05
+    this.dir.z -= 0.005
     if (this.dir.z < -0.1) this.dir.z = -0.1
     this.dir = normalize(this.dir)
-    this.length = 0.2 * (1 + age / 20)
+    this.length = 0.06 * (1 + 0.04 * age)
     this.sectionDrift = this.length / (1 + this.age) ** 2 / 2
-    if (age <= 1) this.length = 0.5
     const cdot = dot(prev.crs, this.dir)
     this.crs = normalize({
       x: prev.crs.x - cdot * this.dir.x,
@@ -87,11 +86,11 @@ export class Branch {
       const { x: dx, y: dy, z: dz } = this.dir
       const { x: cx, y: cy, z: cz } = branchRandomCross(this.dir)
       const c1 = 0.5 + 0.5 * Math.random()
-      const c2 = -0.5 * Math.random()
+      const c2 = -0.5 * Math.random() * (this.age % 3 === 1 ? 1 : 0.5)
       const d1 = { x: dx + c1 * cx, y: dy + c1 * cy, z: dz + c1 * cz }
       const d2 = { x: dx + c2 * cx, y: dy + c2 * cy, z: dz + c2 * cz }
       this._children = [new Branch(this.end, d2, this.age - 1, { dir: this.dir, crs: this.crs }, this.drift + this.sectionDrift)]
-      if (this.age >= 2) this._children.push(new Branch(this.end, d1, this.age - 2, { dir: this.dir, crs: this.crs }, this.drift + this.sectionDrift))
+      if (this.age >= 3 && this.age % 3 === 1) this._children.push(new Branch(this.end, d1, this.age - 2, { dir: this.dir, crs: this.crs }, this.drift + this.sectionDrift))
     }
     return this._children
   }
@@ -100,8 +99,8 @@ export class Branch {
     const { start, end, dir, age } = this
     const a = randomCross(dir)
     const b = cross(dir, a)
-    const w1 = 0.01 * (age + 1)
-    const w2 = 0.01 * age
+    const w1 = 0.0025 * (age + 1)
+    const w2 = 0.0025 * age
     function rounds(point: Point3D, dir: Point3D, c: Point3D, r: number) {
       const s = cross(dir, c)
       return [...new Array(5)].map((_, i) => {
@@ -144,8 +143,8 @@ export class Branch {
     return attributes
   }
   collectFlowerPositions(positions: { start: Point3D, xyrot: number, zrot: number, drift: number }[] = []) {
-    if (this.age <= 1) {
-      const m = 3
+    if (this.age <= 2) {
+      const m = 2
       for (let n = 1; n < m; n++) {
         positions.push({
           start: {
