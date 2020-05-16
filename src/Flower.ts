@@ -82,71 +82,75 @@ export function generateAttributes({ triangles, innerCount, innerLevel, stemLeve
     const offset = [0, 0]
     const coord = [0.25, 0.25]
     const normal = [0, 0, 1]
-    const r = 1.8
+    const r = 1.4
     const position = (i: number) => {
-      const th = 2 * Math.PI * i / 3 + rot
+      const th = 2 * Math.PI * i / 5 + rot
       return [r * Math.cos(th), r * Math.sin(th), stemLength]
     }
-    coordOffsets.push(...offset, ...offset, ...offset)
     positions.push(...position(0), ...position(1), ...position(2))
-    normals.push(...normal, ...normal, ...normal)
-    coords.push(...coord, ...coord, ...coord)
-  }
-  for (let i = 0; i < 5; i++) {
-    if (!triangles) continue
-    const zlevel = zlevels[i]
-    const rotcos = Math.cos(Math.PI * 2 * i / 5 + rot)
-    const rotsin = Math.sin(Math.PI * 2 * i / 5 + rot)
-    const [cx1, cy1, rz1, cx2, cy2, rz2] = sliceRand(6).map(x => 2 * x - 1)
-    const cc1 = Math.PI * rz1
-    const cc2 = Math.PI * rz2
-    const fz = ({ x, y }: Point2D) => {
-      return 0.04 * (
-        + Math.sin(6 * (cx1 * x + cy1 * y) + cc1)
-        + Math.sin(6 * (cx2 * x + cy2 * y) + cc2)
-        - Math.sin(cc1)
-        - Math.sin(cc2)
-      )
-    }
-    const position = (p: Point2D) => {
-      const x = p.x + sakuraTranslateX
-      const y = p.y
-      const r = Math.sqrt(x ** 2 + y ** 2)
-      const t = Math.abs(Math.atan2(y, x)) * 5 / Math.PI
-      const fzscale = r * (t > 1 ? 0 : (1 - t ** 2) ** 2)
-      const z = fzscale * fz(p) + zlevel / 32 * (1 - 1 / (1 + 8 * r)) + 0.1 * r ** 2
-      const r2 = r * flwcos - z * flwsin
-      const z2 = r * flwsin + z * flwcos
-      const x2 = r2 * x / r
-      const y2 = r2 * y / r
-      const x3 = x2 * rotcos - y2 * rotsin
-      const y3 = x2 * rotsin + y2 * rotcos
-      return [x3, y3, z2 - 1 / 32 + stemLength] as const
-
-    }
-    const normal = ({ x, y }: Point2D) => {
-      const d = 0.01
-      const xp = position({ x: x + d, y })
-      const xm = position({ x: x - d, y })
-      const yp = position({ x, y: y + d })
-      const ym = position({ x, y: y - d })
-      const a = xp.map((v, i) => v - xm[i])
-      const b = yp.map((v, i) => v - ym[i])
-      const nx = a[1] * b[2] - a[2] * b[1]
-      const ny = a[2] * b[0] - a[0] * b[2]
-      const nz = a[0] * b[1] - a[1] * b[0]
-      const nr = Math.sqrt(nx ** 2 + ny ** 2 + nz ** 2)
-      return [nx / nr, ny / nr, nz / nr] as const
-    }
-    const upShadow = zlevels[(i + 1) % 5] > zlevel
-    const downShadow = zlevels[(i + 4) % 5] > zlevel
-    const coord = ({ x, y }: Point2D) => [(x + 2) / 4, (y + 2) / 4]
-    const offset = [upShadow ? 1 : -1, downShadow ? -1 : 1]
-    for (const [a, b, c] of triangles) {
+    positions.push(...position(0), ...position(2), ...position(3))
+    positions.push(...position(0), ...position(3), ...position(4))
+    for (let i = 0; i < 3; i++) {
       coordOffsets.push(...offset, ...offset, ...offset)
-      positions.push(...position(a), ...position(b), ...position(c))
-      normals.push(...normal(a), ...normal(b), ...normal(c))
-      coords.push(...coord(a), ...coord(b), ...coord(c))
+      normals.push(...normal, ...normal, ...normal)
+      coords.push(...coord, ...coord, ...coord)
+    }
+  } else {
+    for (let i = 0; i < 5; i++) {
+      const zlevel = zlevels[i]
+      const rotcos = Math.cos(Math.PI * 2 * i / 5 + rot)
+      const rotsin = Math.sin(Math.PI * 2 * i / 5 + rot)
+      const [cx1, cy1, rz1, cx2, cy2, rz2] = sliceRand(6).map(x => 2 * x - 1)
+      const cc1 = Math.PI * rz1
+      const cc2 = Math.PI * rz2
+      const fz = ({ x, y }: Point2D) => {
+        return 0.04 * (
+          + Math.sin(6 * (cx1 * x + cy1 * y) + cc1)
+          + Math.sin(6 * (cx2 * x + cy2 * y) + cc2)
+          - Math.sin(cc1)
+          - Math.sin(cc2)
+        )
+      }
+      const position = (p: Point2D) => {
+        const x = p.x + sakuraTranslateX
+        const y = p.y
+        const r = Math.sqrt(x ** 2 + y ** 2)
+        const t = Math.abs(Math.atan2(y, x)) * 5 / Math.PI
+        const fzscale = r * (t > 1 ? 0 : (1 - t ** 2) ** 2)
+        const z = fzscale * fz(p) + zlevel / 32 * (1 - 1 / (1 + 8 * r)) + 0.1 * r ** 2
+        const r2 = r * flwcos - z * flwsin
+        const z2 = r * flwsin + z * flwcos
+        const x2 = r2 * x / r
+        const y2 = r2 * y / r
+        const x3 = x2 * rotcos - y2 * rotsin
+        const y3 = x2 * rotsin + y2 * rotcos
+        return [x3, y3, z2 - 1 / 32 + stemLength] as const
+
+      }
+      const normal = ({ x, y }: Point2D) => {
+        const d = 0.01
+        const xp = position({ x: x + d, y })
+        const xm = position({ x: x - d, y })
+        const yp = position({ x, y: y + d })
+        const ym = position({ x, y: y - d })
+        const a = xp.map((v, i) => v - xm[i])
+        const b = yp.map((v, i) => v - ym[i])
+        const nx = a[1] * b[2] - a[2] * b[1]
+        const ny = a[2] * b[0] - a[0] * b[2]
+        const nz = a[0] * b[1] - a[1] * b[0]
+        const nr = Math.sqrt(nx ** 2 + ny ** 2 + nz ** 2)
+        return [nx / nr, ny / nr, nz / nr] as const
+      }
+      const upShadow = zlevels[(i + 1) % 5] > zlevel
+      const downShadow = zlevels[(i + 4) % 5] > zlevel
+      const coord = ({ x, y }: Point2D) => [(x + 2) / 4, (y + 2) / 4]
+      const offset = [upShadow ? 1 : -1, downShadow ? -1 : 1]
+      for (const [a, b, c] of triangles) {
+        coordOffsets.push(...offset, ...offset, ...offset)
+        positions.push(...position(a), ...position(b), ...position(c))
+        normals.push(...normal(a), ...normal(b), ...normal(c))
+        coords.push(...coord(a), ...coord(b), ...coord(c))
+      }
     }
   }
   const rparam = (z: number) => {
