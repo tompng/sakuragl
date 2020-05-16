@@ -65,6 +65,7 @@ export type FlowerAttributes = {
   normals: number[]
   coords: number[]
   coordOffsets: number[]
+  drifts: number[]
 }
 
 export function generateAttributes({ triangles, innerCount, innerLevel, stemLevel, stemRLevel }: FlowerParams, rands: number[]): FlowerAttributes {
@@ -72,6 +73,7 @@ export function generateAttributes({ triangles, innerCount, innerLevel, stemLeve
   const normals: number[] = []
   const coords: number[] = []
   const coordOffsets: number[] = []
+  const drifts: number[] = []
   const zlevels = [-2, 0, 2, -1, 1]
   let randIndex = 0
   const rand = () => rands[randIndex++]
@@ -237,15 +239,24 @@ export function generateAttributes({ triangles, innerCount, innerLevel, stemLeve
     }
     for (let j = 0; j < innerLevel; j++) line(j / innerLevel, (j + 1) / innerLevel)
   }
-  return { positions, normals, coords, coordOffsets }
+  const scale = 0.02
+  positions.forEach((v, i) => {
+    positions[i] = v * scale
+  })
+  for (let i = 0; i < positions.length; i += 3) {
+    const [x, y, z] = positions.slice(i, i + 3)
+    drifts.push(Math.hypot(x, y, z) / 8)
+  }
+  return { positions, normals, coords, coordOffsets, drifts }
 }
 
-export function generateGeometry({ positions, normals, coords, coordOffsets }: FlowerAttributes) {
+export function generateGeometry({ positions, normals, coords, coordOffsets, drifts }: FlowerAttributes) {
   const geometry = new BufferGeometry()
   geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
   geometry.setAttribute('normal', new BufferAttribute(new Float32Array(normals), 3))
   geometry.setAttribute('uv', new BufferAttribute(new Float32Array(coords), 2))
   geometry.setAttribute('offset', new BufferAttribute(new Int8Array(coordOffsets), 2))
+  geometry.setAttribute('drift', new BufferAttribute(new Float32Array(drifts), 1))
   return geometry
 }
 
@@ -254,7 +265,8 @@ export function cloneAttributes(attributes: FlowerAttributes) {
     positions: [...attributes.positions],
     normals: [...attributes.normals],
     coords: [...attributes.coords],
-    coordOffsets: [...attributes.coordOffsets]
+    coordOffsets: [...attributes.coordOffsets],
+    drifts: [...attributes.drifts]
   }
 }
 
@@ -263,11 +275,12 @@ export function mergeAttributes(base: FlowerAttributes, adds: FlowerAttributes) 
   base.normals.push(...adds.normals)
   base.coords.push(...adds.coords)
   base.coordOffsets.push(...adds.coordOffsets)
+  base.drifts.push(...adds.drifts)
 }
 
-export function transformAttributes(attributes: { positions: number[], normals: number[] }, transform: { axis?: Point3D, angle?: number, translate?: Point3D }) {
-  const { positions, normals } = attributes
-  const { axis, angle, translate } = transform
+export function transformAttributes(attributes: { positions: number[], normals: number[]; drifts: number[] }, transform: { axis?: Point3D, angle?: number, translate?: Point3D, drift?: number }) {
+  const { positions, normals, drifts } = attributes
+  const { axis, angle, translate, drift } = transform
   if (axis) {
     let { x: ax, y: ay, z: az } = axis
     const ar = Math.sqrt(ax ** 2 + ay ** 2 + az ** 2)
@@ -304,6 +317,9 @@ export function transformAttributes(attributes: { positions: number[], normals: 
       positions[i + 1] += y
       positions[i + 2] += z
     }
+  }
+  if (drift) {
+    for (let i = 0; i < drifts.length; i++) drifts[i] += drift
   }
 }
 
@@ -360,7 +376,8 @@ export function generateBouquets(n: number) {
         normals: [],
         positions: [],
         coords: [],
-        coordOffsets: []
+        coordOffsets: [],
+        drifts: []
       }
       bparams.forEach((bparam, i) => {
         const attrs = cloneAttributes(flowerAttributeLevels[level][flowerIndices[i]])

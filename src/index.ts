@@ -62,10 +62,14 @@ texture.format = THREE.RGBFormat
 texture.needsUpdate = true
 const bouquets = generateBouquets(4)
 
+const uniforms = {
+  texture: { value: texture },
+  wind: { value: new THREE.Vector3(0, 0, 0) }
+}
 const material = new THREE.ShaderMaterial({
   vertexShader,
   fragmentShader,
-  uniforms: { texture: { value: texture } },
+  uniforms,
   side: THREE.DoubleSide
 })
 
@@ -73,7 +77,6 @@ bouquets.forEach((levels, i) => {
   levels.forEach((attrs, j) => {
     const geometry = generateGeometry(attrs)
     const mesh = new THREE.Mesh(geometry, material)
-    mesh.scale.x = mesh.scale.y = mesh.scale.z = 0.02
     mesh.position.z = 1
     mesh.position.x = 2 + i / 5
     mesh.position.y = j / 5
@@ -110,7 +113,6 @@ for (let i = 0; i < 16; i++) {
     lod.position.z = start.z
     levels.forEach((geometry, i) => {
       const mesh = new THREE.Mesh(geometry, material)
-      mesh.scale.x = mesh.scale.y = mesh.scale.z = 0.02
       mesh.rotateOnAxis(new THREE.Vector3(-Math.sin(xyrot), Math.cos(xyrot), 0), zrot)
       lod.addLevel(mesh, [4,2,0.8,0.2,0][i])
     })
@@ -138,6 +140,12 @@ function animate() {
   prevKeypad = { ...keypad }
   timeScale = timeScale * 0.9 + 0.1 * (paused ? 0 : 1)
   time += (prevTime - current) / 1000 * timeScale
+
+  uniforms.wind.value.x = Math.sin(1.21 * time) - Math.sin(1.33 * time)
+  uniforms.wind.value.z = Math.sin(1.57 * time) - Math.sin(1.17 * time)
+  uniforms.wind.value.y = Math.sin(1.37 * time) - Math.sin(1.51 * time)
+  material.needsUpdate = true
+
   prevTime = current
   updateCamera()
   update(time, scene, camera)
