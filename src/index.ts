@@ -55,6 +55,8 @@ import { generateBouquets, generateGeometry } from './Flower'
 import { createShadowedSakuraTexture } from './sakura'
 import vertexShader from './shaders/flower.vert'
 import fragmentShader from './shaders/flower.frag'
+import treeVertexShader from './shaders/tree.vert'
+import treeFragmentShader from './shaders/tree.frag'
 const texture = new THREE.Texture(createShadowedSakuraTexture(512))
 texture.magFilter = THREE.LinearFilter
 texture.minFilter = THREE.LinearFilter
@@ -72,6 +74,11 @@ const material = new THREE.ShaderMaterial({
   uniforms,
   side: THREE.DoubleSide
 })
+const treeMaterial = new THREE.ShaderMaterial({
+  vertexShader: treeVertexShader,
+  fragmentShader: treeFragmentShader,
+  uniforms
+})
 
 bouquets.forEach((levels, i) => {
   levels.forEach((attrs, j) => {
@@ -85,7 +92,8 @@ bouquets.forEach((levels, i) => {
 })
 
 const bouquetGeometries = bouquets.map(levels => levels.map(generateGeometry))
-import { Branch } from './tree'
+import { Branch, Point3D } from './tree'
+const updates: { mesh: Mesh | THREE.LOD, start: Point3D, drift: number }[] = []
 for (let i = 0; i < 16; i++) {
   const x = 10 * Math.random()
   const y = 10 * Math.random()
@@ -99,13 +107,15 @@ for (let i = 0; i < 16; i++) {
       crs: { x: 1, y: 0, z: 0 },
     }
   )
-  const positions = tree.positions()
+  const attributes = tree.attributes()
   const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3))
-  const treeMesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: '#110804', side: THREE.DoubleSide }))
+  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(attributes.positions), 3))
+  geometry.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(attributes.normals), 3))
+  geometry.setAttribute('drift', new THREE.BufferAttribute(new Float32Array(attributes.drifts), 1))
+  const treeMesh = new THREE.Mesh(geometry, treeMaterial)
   scene.add(treeMesh)
   const flowers = tree.collectFlowerPositions()
-  flowers.forEach(({ start, xyrot, zrot }) => {
+  flowers.forEach(({ start, xyrot, zrot, drift }) => {
     const levels = bouquetGeometries[Math.floor(4 * Math.random())]
     const lod = new THREE.LOD()
     lod.position.x = start.x
@@ -116,10 +126,10 @@ for (let i = 0; i < 16; i++) {
       mesh.rotateOnAxis(new THREE.Vector3(-Math.sin(xyrot), Math.cos(xyrot), 0), zrot)
       lod.addLevel(mesh, [4,2,0.8,0.2,0][i])
     })
+    updates.push({ mesh: lod, start, drift })
     scene.add(lod)
   })
 }
-
 
 const light = new DirectionalLight(0xffffff, 1)
 const alight = new AmbientLight(0x202020, 1)
@@ -141,10 +151,16 @@ function animate() {
   timeScale = timeScale * 0.9 + 0.1 * (paused ? 0 : 1)
   time += (prevTime - current) / 1000 * timeScale
 
-  uniforms.wind.value.x = Math.sin(1.21 * time) - Math.sin(1.33 * time)
-  uniforms.wind.value.z = Math.sin(1.57 * time) - Math.sin(1.17 * time)
-  uniforms.wind.value.y = Math.sin(1.37 * time) - Math.sin(1.51 * time)
+  uniforms.wind.value.x = (Math.sin(1.21 * time) - Math.sin(1.33 * time)) / 16
+  uniforms.wind.value.z = (Math.sin(1.57 * time) - Math.sin(1.17 * time)) / 32
+  uniforms.wind.value.y = (Math.sin(1.37 * time) - Math.sin(1.51 * time)) / 16
+  updates.forEach(({ mesh, start, drift }) => {
+    mesh.position.x = start.x + drift * uniforms.wind.value.x
+    mesh.position.y = start.y + drift * uniforms.wind.value.y
+    mesh.position.z = start.z + drift * uniforms.wind.value.z
+  })
   material.needsUpdate = true
+  treeMaterial.needsUpdate = true
 
   prevTime = current
   updateCamera()

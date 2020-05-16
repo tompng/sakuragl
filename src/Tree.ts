@@ -5,7 +5,7 @@ import {
 import * as THREE from 'three'
 import { generateBouquets, generateGeometry, transformAttributes } from './Flower'
 
-type Point3D = { x: number; y: number; z: number }
+export type Point3D = { x: number; y: number; z: number }
 function normalize({ x, y, z }: Point3D) {
   const r = Math.sqrt(x ** 2 + y ** 2 + z ** 2)
   if (r === 0) return { x: 0, y: 0, z: 0 }
@@ -57,12 +57,14 @@ export class Branch {
   _children: Branch[] | null = null
   length: number
   crs: Point3D
-  constructor(public start: Point3D, public dir: Point3D, public age: number, public prev: { dir: Point3D, crs: Point3D }) {
+  sectionDrift: number
+  constructor(public start: Point3D, public dir: Point3D, public age: number, public prev: { dir: Point3D, crs: Point3D }, public drift = 0) {
     this.dir = normalize(this.dir)
     this.dir.z -= 0.05
     if (this.dir.z < -0.1) this.dir.z = -0.1
     this.dir = normalize(this.dir)
     this.length = 0.2 * (1 + age / 20)
+    this.sectionDrift = this.length / (1 + this.age) ** 2 / 2
     if (age <= 1) this.length = 0.5
     const cdot = dot(prev.crs, this.dir)
     this.crs = normalize({
@@ -88,12 +90,13 @@ export class Branch {
       const c2 = -0.5 * Math.random()
       const d1 = { x: dx + c1 * cx, y: dy + c1 * cy, z: dz + c1 * cz }
       const d2 = { x: dx + c2 * cx, y: dy + c2 * cy, z: dz + c2 * cz }
-      this._children = [new Branch(this.end, d2, this.age - 1, { dir: this.dir, crs: this.crs })]
-      if (this.age >= 2) this._children.push(new Branch(this.end, d1, this.age - 2, { dir: this.dir, crs: this.crs }))
+      this._children = [new Branch(this.end, d2, this.age - 1, { dir: this.dir, crs: this.crs }, this.drift + this.sectionDrift)]
+      if (this.age >= 2) this._children.push(new Branch(this.end, d1, this.age - 2, { dir: this.dir, crs: this.crs }, this.drift + this.sectionDrift))
     }
     return this._children
   }
-  positions(positions: number[] = []) {
+  attributes(attributes: { positions: number[]; normals: number[]; drifts: number[] } = { positions: [], normals: [], drifts: [] }) {
+    const { positions, normals, drifts } = attributes
     const { start, end, dir, age } = this
     const a = randomCross(dir)
     const b = cross(dir, a)
@@ -105,31 +108,42 @@ export class Branch {
         const th = 2 * Math.PI * (i + (r === 0 ? 0.5 : 0)) / 5
         const cos = Math.cos(th)
         const sin = Math.sin(th)
-        return {
-          x: point.x + r * (c.x * cos + s.x * sin),
-          y: point.y + r * (c.y * cos + s.y * sin),
-          z: point.z + r * (c.z * cos + s.z * sin)
-        }
+        return [
+          {
+            x: point.x + r * (c.x * cos + s.x * sin),
+            y: point.y + r * (c.y * cos + s.y * sin),
+            z: point.z + r * (c.z * cos + s.z * sin)
+          },
+          {
+            x: c.x * cos + s.x * sin,
+            y: c.y * cos + s.y * sin,
+            z: c.z * cos + s.z * sin
+          }
+        ]
       })
     }
     const prevs = rounds(start, this.prev.dir, this.prev.crs, w1)
     const nexts = rounds(end, this.dir, this.crs, w2)
-    prevs.forEach((p, i) => {
-      const q = prevs[(i + 1) % prevs.length]
-      const r = nexts[i]
-      positions.push(p.x, p.y, p.z, q.x, q.y, q.z, r.x, r.y, r.z )
+    prevs.forEach(([p, pn], i) => {
+      const [q, qn] = prevs[(i + 1) % prevs.length]
+      const [r, rn] = nexts[i]
+      positions.push(p.x, p.y, p.z, q.x, q.y, q.z, r.x, r.y, r.z)
+      normals.push(pn.x, pn.y, pn.z, qn.x, qn.y, qn.z, rn.x, rn.y, rn.z)
+      drifts.push(this.drift, this.drift, this.drift + this.sectionDrift)
     })
     if (w2 !== 0) {
-      nexts.forEach((p, i) => {
-        const q = prevs[(i + 1) % prevs.length]
-        const r = nexts[(i + 1) % nexts.length]
+      nexts.forEach(([p, pn], i) => {
+        const [q, qn] = prevs[(i + 1) % prevs.length]
+        const [r, rn] = nexts[(i + 1) % nexts.length]
         positions.push(p.x, p.y, p.z, q.x, q.y, q.z, r.x, r.y, r.z)
+        normals.push(pn.x, pn.y, pn.z, qn.x, qn.y, qn.z, rn.x, rn.y, rn.z)
+        drifts.push(this.drift + this.sectionDrift, this.drift, this.drift + this.sectionDrift)
       })
     }
-    this.children.forEach(c => c.positions(positions))
-    return positions
+    this.children.forEach(c => c.attributes(attributes))
+    return attributes
   }
-  collectFlowerPositions(positions: { start: Point3D, xyrot: number, zrot: number }[] = []) {
+  collectFlowerPositions(positions: { start: Point3D, xyrot: number, zrot: number, drift: number }[] = []) {
     if (this.age <= 1) {
       const m = 3
       for (let n = 1; n < m; n++) {
@@ -139,11 +153,12 @@ export class Branch {
             y: this.start.y + this.length * this.dir.y * n / m,
             z: this.start.z + this.length * this.dir.z * n / m
           },
-          ...dir2rotation(branchRandomCross(this.dir))
+          ...dir2rotation(branchRandomCross(this.dir)),
+          drift: this.drift + this.sectionDrift * n / m
         })
       }
       if (this.children.length === 0) {
-        positions.push({ start: this.end, ...dir2rotation(this.dir) })
+        positions.push({ start: this.end, ...dir2rotation(this.dir), drift: this.drift + this.sectionDrift })
       }
     }
     this.children.forEach(c => c.collectFlowerPositions(positions))

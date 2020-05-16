@@ -3,7 +3,7 @@ varying vec3 vNormal;
 varying vec2 vCoord;
 varying vec2 vOffset;
 varying float vDecay;
-const vec3 light = vec3(0.48,0.6,0.64);//normalize(vec3(2,3,0));//vec3(0.48,0.6,0.64);
+const vec3 light = vec3(0.48,0.6,0.64);
 
 void main() {
   vec3 normal = normalize(vNormal);
