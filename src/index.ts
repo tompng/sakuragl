@@ -83,11 +83,19 @@ bouquets.forEach((levels, i) => {
 
 const bouquetGeometries = bouquets.map(levels => levels.map(generateGeometry))
 import { Branch } from './tree'
-for (let i = 0; i < 10; i++) {
+for (let i = 0; i < 16; i++) {
   const x = 10 * Math.random()
   const y = 10 * Math.random()
   const z = landZ(x, y)
-  const tree = new Branch({ x, y, z },{ x: 0, y: 0, z: 1 }, 10)
+  const tree = new Branch(
+    { x, y, z },
+    { x: 0, y: 0, z: 1 },
+    Math.floor(5 + 5 * Math.random()),
+    {
+      dir: { x: 0, y: 0, z: 1 },
+      crs: { x: 1, y: 0, z: 0 },
+    }
+  )
   const positions = tree.positions()
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3))
