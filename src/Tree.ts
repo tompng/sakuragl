@@ -5,7 +5,7 @@ import {
   Scene,
 } from 'three'
 import * as THREE from 'three'
-import { FlowerAttributes, generateBouquets, generateGeometry, mergeAttributes, cloneAttributes, transformAttributes } from './Flower'
+import { FlowerAttributes, generateBouquetParamList, generateBouquets, generateGeometry, mergeAttributes, cloneAttributes, transformAttributes } from './Flower'
 
 type FlowerPosition = { start: Point3D, xyrot: number, zrot: number, drift: number, index: number }
 export type Point3D = { x: number; y: number; z: number }
@@ -167,11 +167,67 @@ export class Branch {
     return positions
   }
 }
-
-const bouquets = generateBouquets(4)
+const bparamlist = generateBouquetParamList(4)
+const bouquets = generateBouquets(bparamlist)
 const bouquetGeometries = bouquets.map(levels => levels.map(generateGeometry))
 type Range = Record<'x' | 'y' | 'z', { min: number; max: number; size: number; center: number }>
 type Section = { identifier: number; center: Point3D; radius: number; levelGeometries: BufferGeometry[]; positions: FlowerPosition[] }
+
+function rotate({ x, y, z }: Point3D, axis: Point3D, angle: number) {
+  let { x: ax, y: ay, z: az } = axis
+  const ar = Math.sqrt(ax ** 2 + ay ** 2 + az ** 2)
+  ax /= ar
+  ay /= ar
+  az /= ar
+  const theta = angle === undefined ? ar : angle
+  const cos = Math.cos(theta)
+  const sin = Math.sin(theta)
+  const dot = x * ax + y * ay + z * az
+  x -= dot * ax
+  y -= dot * ay
+  z -= dot * az
+  const bx = y * az - z * ay
+  const by = z * ax - x * az
+  const bz = x * ay - y * ax
+  return {
+    x: dot * ax + x * cos - bx * sin,
+    y: dot * ay + y * cos - by * sin,
+    z: dot * az + z * cos - bz * sin
+  }
+}
+
+function particleGeometryFromPositions(flowerPositions: FlowerPosition[], eachFlower: boolean) {
+  const positions: number[] = []
+  const sizes: number[] = []
+  flowerPositions.forEach(({ start, xyrot, zrot, index, drift }) => {
+    const bparams = bparamlist[index % bouquets.length]
+    const stemLength = 0.075
+    if (eachFlower) {
+      bparams.forEach(bparam => {
+        const p = rotate(
+          { x: 0, y: 0, z: stemLength },
+          { x: -Math.sin(bparam.xyrot), y: Math.cos(bparam.xyrot), z: 0 },
+          bparam.zrot
+        )
+        const q = rotate(p, { x: -Math.sin(xyrot), y: Math.cos(xyrot), z: 0 }, zrot)
+        positions.push(start.x + q.x, start.y + q.y, start.z + q.z)
+        sizes.push(0.04)
+      })
+    } else {
+      const p = rotate(
+        { x: 0, y: 0, z: stemLength },
+        { x: -Math.sin(xyrot), y: Math.cos(xyrot), z: 0 },
+        zrot
+      )
+      positions.push(start.x + p.x, start.y + p.y, start.z + p.z)
+      sizes.push(0.07)
+    }
+  })
+  const geometry = new BufferGeometry()
+  geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
+  geometry.setAttribute('size', new BufferAttribute(new Float32Array(sizes), 1))
+  return geometry
+}
 
 function geometryFromPositions(positions: FlowerPosition[], level: number) {
   const attributes: FlowerAttributes = {
@@ -198,8 +254,19 @@ function geometryFromPositions(positions: FlowerPosition[], level: number) {
     new THREE.Vector3((xmin + xmax) / 2, (ymin + ymax) / 2, (zmin + zmax) / 2),
     Math.hypot(xmax - xmin, ymax - ymin, zmax - zmin) / 2 + safe
   )
+  geometry.computeBoundingSphere()
   return geometry
 }
+
+import flowerParticleVertexShader from './shaders/flowerParticle.vert'
+import flowerParticleFragmentShader from './shaders/flowerParticle.frag'
+const flowerParticleMaterial = new THREE.ShaderMaterial({
+  vertexShader: flowerParticleVertexShader,
+  fragmentShader: flowerParticleFragmentShader,
+  transparent: true
+})
+
+
 export class TreeFlower {
   range: Range
   pointGeometries: BufferGeometry[] = []
@@ -215,6 +282,7 @@ export class TreeFlower {
       return { min, max, size: max - min, center: (min + max) / 2 }
     }
     this.range = { x: rangeOf(xs), y: rangeOf(ys), z: rangeOf(zs) }
+    this.pointGeometries = [false, true].map(detail => particleGeometryFromPositions(positions, detail))
     this.triangleGeometries = [0, 1].map(level => geometryFromPositions(positions, level))
     const segsize = 0.5
     const xsegs = Math.ceil((this.range.x.size) / segsize)
@@ -246,7 +314,7 @@ export class TreeFlower {
       sec.positions.push(pos)
     })
   }
-  update(scene: THREE.Scene, camera: THREE.Camera, material: THREE.ShaderMaterial, position: Point3D, oldMeshes: Map<string | BufferGeometry, THREE.Mesh>, newMeshes: Map<string | BufferGeometry, THREE.Mesh>) {
+  update(scene: THREE.Scene, camera: THREE.Camera, material: THREE.ShaderMaterial, position: Point3D, oldMeshes: Map<string | BufferGeometry, THREE.Mesh | THREE.Points>, newMeshes: Map<string | BufferGeometry, THREE.Mesh | THREE.Points>) {
     const { x: cx, y: cy, z: cz } = camera.position
     const { x, y, z } = position
     const dist1d = ({ min, max }: { min: number, max: number }, cam: number) => (
@@ -266,24 +334,27 @@ export class TreeFlower {
     const threshold1 = 1
     const threshold2 = 2.5
     const threshold3 = 4
-    const threshold4 = 8
+    const threshold4 = 7
+    const threshold5 = 9
     const wind: Point3D = {
       x: material.uniforms.wind.value.x || 0,
       y: material.uniforms.wind.value.y || 0,
       z: material.uniforms.wind.value.z || 0,
     }
-    const set = (geometry: BufferGeometry, material: THREE.Material) => {
+    const set = (geometry: BufferGeometry, material: THREE.Material, particle: boolean = false) => {
       let mesh = oldMeshes.get(geometry)
       if (!mesh) {
-        mesh = new THREE.Mesh(geometry, material)
+        mesh = particle ? new THREE.Points(geometry, material) : new THREE.Mesh(geometry, material)
         mesh.position.x = position.x
         mesh.position.y = position.y
         mesh.position.z = position.z
       }
       newMeshes.set(geometry, mesh)
     }
-    if (distance > threshold4) {
-
+    if (distance > threshold5) {
+      set(this.pointGeometries[0], flowerParticleMaterial, true)
+    } else if (distance > threshold4) {
+      set(this.pointGeometries[1], flowerParticleMaterial, true)
     } else if (distance > threshold3) {
       set(this.triangleGeometries[0], material)
     } else if (distance > threshold2) {
@@ -362,7 +433,7 @@ import treeVertexShader from './shaders/tree.vert'
 import treeFragmentShader from './shaders/tree.frag'
 
 import { createShadowedSakuraTexture } from './sakura'
-import { update } from './Particle'
+
 const texture = new THREE.Texture(createShadowedSakuraTexture(512))
 texture.magFilter = THREE.LinearFilter
 texture.minFilter = THREE.LinearFilter
@@ -370,7 +441,7 @@ texture.format = THREE.RGBFormat
 texture.needsUpdate = true
 
 export class Tree {
-  flowerMeshes = new Map<string | BufferGeometry, THREE.Mesh>()
+  flowerMeshes = new Map<string | BufferGeometry, THREE.Mesh | THREE.Points>()
   branchMesh: THREE.Mesh | null = null
   uniforms = {
     texture: { value: texture },
@@ -408,7 +479,7 @@ export class Tree {
     this.uniforms.wind.value.x = (Math.sin(this.windRandoms[0] * time) - Math.sin(this.windRandoms[1] * time)) / 16
     this.uniforms.wind.value.z = (Math.sin(this.windRandoms[2] * time) - Math.sin(this.windRandoms[3] * time)) / 32
     this.uniforms.wind.value.y = (Math.sin(this.windRandoms[4] * time) - Math.sin(this.windRandoms[5] * time)) / 16
-    const level = distance > 8 ? 0 : distance > 6 ? 1 : distance > 4 ? 2 : 0
+    const level = distance > 8 ? 0 : distance > 6 ? 1 : distance > 4 ? 2 : 3
     const branchGeometry = this.base.branchGeometry(level)
     if (!this.branchMesh || this.branchMesh.geometry !== branchGeometry) {
       this.branchMesh?.remove()
@@ -418,7 +489,7 @@ export class Tree {
       this.branchMesh.position.z = this.position.z
       scene.add(this.branchMesh)
     }
-    const newFlowerMeshes = new Map<string | BufferGeometry, THREE.Mesh>()
+    const newFlowerMeshes = new Map<string | BufferGeometry, THREE.Mesh | THREE.Points>()
     this.base.flowers.update(scene, camera, this.flowerMaterial, this.position, this.flowerMeshes, newFlowerMeshes)
     this.flowerMeshes = newFlowerMeshes
   }

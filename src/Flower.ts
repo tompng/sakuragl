@@ -323,7 +323,7 @@ export function transformAttributes(attributes: { positions: number[], normals: 
   }
 }
 
-type BouquetParam = { x: number; y: number; z: number, xyrot: number, zrot: number }
+type BouquetParam = { xyrot: number, zrot: number }
 export function bouquetParams(n: number, theta: number = Math.PI * 2 / 5, dtheta: number = Math.PI / 4): BouquetParam[] {
   const points: Point3D[] = []
   const randratio = 1.2
@@ -363,13 +363,15 @@ export function bouquetParams(n: number, theta: number = Math.PI * 2 / 5, dtheta
   }).filter(p => p.zrot < theta).slice(0, n)
 }
 
-export function generateBouquets(n: number) {
+export function generateBouquetParamList(n: number) {
+  return [...new Array(n)].map(() => bouquetParams(6 + 4 * Math.random()))
+}
+export function generateBouquets(paramList: BouquetParam[][]) {
   const randsList = [...new Array(16)].map(generateRands)
   const flowerAttributeLevels = FlowerLevels.map(params =>
     randsList.map(rands => generateAttributes(params, rands))
   )
-  return [...new Array(n)].map(() => {
-    const bparams = bouquetParams(6 + 4 * Math.random())
+  return paramList.map(bparams => {
     const flowerIndices = bparams.map(() => Math.floor(randsList.length * Math.random()))
     return FlowerLevels.map((_, level) => {
       const attributes: FlowerAttributes = {
