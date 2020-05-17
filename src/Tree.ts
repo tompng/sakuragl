@@ -523,14 +523,17 @@ export class Forest {
     })
   }
   createPanel(px: number, py: number) {
-    return [...new Array(8)].map((_, i) => {
+    const trees: Tree[] = []
+    for (let i = 0; i < 8; i++) {
       const a = Math.cos(1234 * px + 2345 * py + 3456 * i)
       const b = Math.cos(4567 * a + 5678 * px + 6789 * py)
       const x = px + this.panelSize * ((b + 1) * 1234 % 1)
       const y = py + this.panelSize * ((b + 1) * 2345 % 1)
       const z = this.zfunc(x, y) - 0.05
+      if (z < 0) continue
       const idx = Math.floor(this.bases.length * ((b + 1) * 3456 % 1))
-      return new Tree(this.bases[idx], { x, y, z })
-    })
+      trees.push(new Tree(this.bases[idx], { x, y, z }))
+    }
+    return trees
   }
 }
