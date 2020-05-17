@@ -90,30 +90,15 @@ bouquets.forEach((levels, i) => {
   })
 })
 
-import { Branch, Point3D, TreeFlower } from './Tree'
-const treeflowers: TreeFlower[] = []
-for (let i = 0; i < 16; i++) {
-  const x = 10 * Math.random()
-  const y = 10 * Math.random()
-  const z = landZ(x, y)
-  const tree = new Branch(
-    { x, y, z },
-    { x: 0, y: 0, z: 1 },
-    Math.floor(12 + 12 * Math.random()),
-    {
-      dir: { x: 0, y: 0, z: 1 },
-      crs: { x: 1, y: 0, z: 0 },
-    }
-  )
-  const attributes = tree.attributes()
-  const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(attributes.positions), 3))
-  geometry.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(attributes.normals), 3))
-  geometry.setAttribute('drift', new THREE.BufferAttribute(new Float32Array(attributes.drifts), 1))
-  const treeMesh = new THREE.Mesh(geometry, treeMaterial)
-  scene.add(treeMesh)
-  const flowers = tree.collectFlowerPositions()
-  treeflowers.push(new TreeFlower(flowers))
+import { Branch, Point3D, TreeFlower, TreeBase, Tree } from './Tree'
+const treeBases = [...new Array(16)].map(() => new TreeBase())
+const trees: Tree[] = []
+for (let i = 0; i < 256; i++) {
+  const x = 32 * Math.random() - 16
+  const y = 32 * Math.random() - 16
+  const z = landZ(x, y) - 0.1
+  const tree = new Tree(treeBases[Math.floor(treeBases.length * Math.random())], { x, y, z })
+  trees.push(tree)
 }
 
 const light = new DirectionalLight(0xffffff, 1)
@@ -139,7 +124,7 @@ function animate() {
   uniforms.wind.value.x = (Math.sin(1.21 * time) - Math.sin(1.33 * time)) / 16
   uniforms.wind.value.z = (Math.sin(1.57 * time) - Math.sin(1.17 * time)) / 32
   uniforms.wind.value.y = (Math.sin(1.37 * time) - Math.sin(1.51 * time)) / 16
-  treeflowers.forEach(tf => tf.update(scene, camera, material))
+  trees.forEach(t => t.update(time, scene, camera))
   material.needsUpdate = true
   treeMaterial.needsUpdate = true
 
