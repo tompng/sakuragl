@@ -302,9 +302,9 @@ export class TreeFlower {
         secs[si] = sec = {
           identifier: si,
           center: {
-            x: this.range.x.center,
-            y: this.range.y.center,
-            z: this.range.z.center
+            x: this.range.x.min + this.range.x.size * (xi + 0.5) / xsegs,
+            y: this.range.y.min + this.range.y.size * (yi + 0.5) / ysegs,
+            z: this.range.z.min + this.range.z.size * (zi + 0.5) / zsegs
           },
           radius: Math.hypot(this.range.x.size / xsegs, this.range.y.size / ysegs, this.range.z.size / zsegs) / 2,
           levelGeometries: [],
