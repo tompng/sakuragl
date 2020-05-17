@@ -220,7 +220,7 @@ function particleGeometryFromPositions(flowerPositions: FlowerPosition[], eachFl
         zrot
       )
       positions.push(start.x + p.x, start.y + p.y, start.z + p.z)
-      sizes.push(0.07)
+      sizes.push(0.1)
     }
   })
   const geometry = new BufferGeometry()
@@ -263,7 +263,8 @@ import flowerParticleFragmentShader from './shaders/flowerParticle.frag'
 const flowerParticleMaterial = new THREE.ShaderMaterial({
   vertexShader: flowerParticleVertexShader,
   fragmentShader: flowerParticleFragmentShader,
-  transparent: true
+  transparent: true,
+  depthWrite: false
 })
 
 
@@ -335,7 +336,7 @@ export class TreeFlower {
     const threshold2 = 2.5
     const threshold3 = 4
     const threshold4 = 7
-    const threshold5 = 9
+    const threshold5 = 10
     const wind: Point3D = {
       x: material.uniforms.wind.value.x || 0,
       y: material.uniforms.wind.value.y || 0,
@@ -460,9 +461,9 @@ export class Tree {
   })
   windRandoms = [...new Array(6)].map(() => 1 + Math.random())
   constructor(public base: TreeBase, public position: Point3D) {}
-  removeAll() {
-    this.branchMesh?.remove()
-    this.flowerMeshes.forEach(mesh => mesh.remove())
+  removeAll(scene: Scene) {
+    if (this.branchMesh) scene.remove(this.branchMesh)
+    this.flowerMeshes.forEach(mesh => scene.remove(mesh))
     this.flowerMeshes.clear()
     this.branchMesh = null
   }
@@ -473,7 +474,7 @@ export class Tree {
       camera.position.z - this.position.z
     )
     if (distance > 16) {
-      this.removeAll()
+      this.removeAll(scene)
       return
     }
     this.uniforms.wind.value.x = (Math.sin(this.windRandoms[0] * time) - Math.sin(this.windRandoms[1] * time)) / 16
@@ -482,7 +483,7 @@ export class Tree {
     const level = distance > 8 ? 0 : distance > 6 ? 1 : distance > 4 ? 2 : 3
     const branchGeometry = this.base.branchGeometry(level)
     if (!this.branchMesh || this.branchMesh.geometry !== branchGeometry) {
-      this.branchMesh?.remove()
+      if (this.branchMesh) scene.remove(this.branchMesh)
       this.branchMesh = new THREE.Mesh(branchGeometry, this.treeMaterial)
       this.branchMesh.position.x = this.position.x
       this.branchMesh.position.y = this.position.y
@@ -501,7 +502,7 @@ export class Forest {
 
   constructor(public bases: TreeBase[], public zfunc: (x: number, y: number) => number) {}
   update(time: number, scene: Scene, camera: THREE.Camera) {
-    const { x: cx, y: cy, z: cz } = camera.position
+    const { x: cx, y: cy } = camera.position
     const x0 = Math.floor((cx - 16) / this.panelSize) * this.panelSize
     const y0 = Math.floor((cy - 16) / this.panelSize) * this.panelSize
     const existings = new Set<string>()
@@ -509,8 +510,7 @@ export class Forest {
       for (let y = y0; y < cy + 16; y += this.panelSize) {
         const key = x + '_' + y
         existings.add(key)
-        if (this.panels.has(key)) continue
-        this.panels.set(key, this.createPanel(x, y))
+        if (!this.panels.has(key)) this.panels.set(key, this.createPanel(x, y))
       }
     }
     this.panels.forEach((trees, key) => {
@@ -518,7 +518,7 @@ export class Forest {
         trees.forEach(t => t.update(time, scene, camera))
       } else {
         this.panels.delete(key)
-        trees.forEach(t => t.removeAll())
+        trees.forEach(t => t.removeAll(scene))
       }
     })
   }
