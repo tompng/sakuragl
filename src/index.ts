@@ -1,7 +1,6 @@
 import * as THREE from 'three'
 import { Scene, PerspectiveCamera, WebGLRenderer, Vector3, Mesh } from 'three'
 import { AmbientLight, DirectionalLight } from 'three'
-//import { start } from './branchTest'
 import { start, update } from './Particle'
 import { Land, landZ } from './Land'
 import { Sky } from './Sky'
@@ -91,9 +90,8 @@ bouquets.forEach((levels, i) => {
   })
 })
 
-const bouquetGeometries = bouquets.map(levels => levels.map(generateGeometry))
-import { Branch, Point3D } from './tree'
-const updates: { mesh: Mesh | THREE.LOD, start: Point3D, drift: number }[] = []
+import { Branch, Point3D, TreeFlower } from './Tree'
+const treeflowers: TreeFlower[] = []
 for (let i = 0; i < 16; i++) {
   const x = 10 * Math.random()
   const y = 10 * Math.random()
@@ -115,20 +113,7 @@ for (let i = 0; i < 16; i++) {
   const treeMesh = new THREE.Mesh(geometry, treeMaterial)
   scene.add(treeMesh)
   const flowers = tree.collectFlowerPositions()
-  flowers.forEach(({ start, xyrot, zrot, drift }) => {
-    const levels = bouquetGeometries[Math.floor(4 * Math.random())]
-    const lod = new THREE.LOD()
-    lod.position.x = start.x
-    lod.position.y = start.y
-    lod.position.z = start.z
-    levels.forEach((geometry, i) => {
-      const mesh = new THREE.Mesh(geometry, material)
-      mesh.rotateOnAxis(new THREE.Vector3(-Math.sin(xyrot), Math.cos(xyrot), 0), zrot)
-      lod.addLevel(mesh, [4,2,0.8,0.2,0][i])
-    })
-    updates.push({ mesh: lod, start, drift })
-    scene.add(lod)
-  })
+  treeflowers.push(new TreeFlower(flowers))
 }
 
 const light = new DirectionalLight(0xffffff, 1)
@@ -154,11 +139,7 @@ function animate() {
   uniforms.wind.value.x = (Math.sin(1.21 * time) - Math.sin(1.33 * time)) / 16
   uniforms.wind.value.z = (Math.sin(1.57 * time) - Math.sin(1.17 * time)) / 32
   uniforms.wind.value.y = (Math.sin(1.37 * time) - Math.sin(1.51 * time)) / 16
-  updates.forEach(({ mesh, start, drift }) => {
-    mesh.position.x = start.x + drift * uniforms.wind.value.x
-    mesh.position.y = start.y + drift * uniforms.wind.value.y
-    mesh.position.z = start.z + drift * uniforms.wind.value.z
-  })
+  treeflowers.forEach(tf => tf.update(scene, camera, material))
   material.needsUpdate = true
   treeMaterial.needsUpdate = true
 
