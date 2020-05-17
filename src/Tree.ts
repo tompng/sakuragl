@@ -362,6 +362,7 @@ import treeVertexShader from './shaders/tree.vert'
 import treeFragmentShader from './shaders/tree.frag'
 
 import { createShadowedSakuraTexture } from './sakura'
+import { update } from './Particle'
 const texture = new THREE.Texture(createShadowedSakuraTexture(512))
 texture.magFilter = THREE.LinearFilter
 texture.minFilter = THREE.LinearFilter
@@ -388,12 +389,22 @@ export class Tree {
   })
   windRandoms = [...new Array(6)].map(() => 1 + Math.random())
   constructor(public base: TreeBase, public position: Point3D) {}
+  removeAll() {
+    this.branchMesh?.remove()
+    this.flowerMeshes.forEach(mesh => mesh.remove())
+    this.flowerMeshes.clear()
+    this.branchMesh = null
+  }
   update(time: number, scene: Scene, camera: THREE.Camera) {
     const distance = Math.hypot(
       camera.position.x - this.position.x,
       camera.position.y - this.position.y,
       camera.position.z - this.position.z
     )
+    if (distance > 16) {
+      this.removeAll()
+      return
+    }
     this.uniforms.wind.value.x = (Math.sin(this.windRandoms[0] * time) - Math.sin(this.windRandoms[1] * time)) / 16
     this.uniforms.wind.value.z = (Math.sin(this.windRandoms[2] * time) - Math.sin(this.windRandoms[3] * time)) / 32
     this.uniforms.wind.value.y = (Math.sin(this.windRandoms[4] * time) - Math.sin(this.windRandoms[5] * time)) / 16
@@ -410,5 +421,45 @@ export class Tree {
     const newFlowerMeshes = new Map<string | BufferGeometry, THREE.Mesh>()
     this.base.flowers.update(scene, camera, this.flowerMaterial, this.position, this.flowerMeshes, newFlowerMeshes)
     this.flowerMeshes = newFlowerMeshes
+  }
+}
+
+export class Forest {
+  panels = new Map<string, Tree[]>()
+  panelSize = 4
+
+  constructor(public bases: TreeBase[], public zfunc: (x: number, y: number) => number) {}
+  update(time: number, scene: Scene, camera: THREE.Camera) {
+    const { x: cx, y: cy, z: cz } = camera.position
+    const x0 = Math.floor((cx - 16) / this.panelSize) * this.panelSize
+    const y0 = Math.floor((cy - 16) / this.panelSize) * this.panelSize
+    const existings = new Set<string>()
+    for (let x = x0; x < cx + 16; x += this.panelSize) {
+      for (let y = y0; y < cy + 16; y += this.panelSize) {
+        const key = x + '_' + y
+        existings.add(key)
+        if (this.panels.has(key)) continue
+        this.panels.set(key, this.createPanel(x, y))
+      }
+    }
+    this.panels.forEach((trees, key) => {
+      if (existings.has(key)) {
+        trees.forEach(t => t.update(time, scene, camera))
+      } else {
+        this.panels.delete(key)
+        trees.forEach(t => t.removeAll())
+      }
+    })
+  }
+  createPanel(px: number, py: number) {
+    return [...new Array(8)].map((_, i) => {
+      const a = Math.cos(1234 * px + 2345 * py + 3456 * i)
+      const b = Math.cos(4567 * a + 5678 * px + 6789 * py)
+      const x = px + this.panelSize * ((b + 1) * 1234 % 1)
+      const y = py + this.panelSize * ((b + 1) * 2345 % 1)
+      const z = this.zfunc(x, y) - 0.05
+      const idx = Math.floor(this.bases.length * ((b + 1) * 3456 % 1))
+      return new Tree(this.bases[idx], { x, y, z })
+    })
   }
 }

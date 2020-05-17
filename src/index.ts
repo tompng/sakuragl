@@ -1,6 +1,5 @@
 import * as THREE from 'three'
-import { Scene, PerspectiveCamera, WebGLRenderer, Vector3, Mesh } from 'three'
-import { AmbientLight, DirectionalLight } from 'three'
+import { Scene, PerspectiveCamera, WebGLRenderer } from 'three'
 import { start, update } from './Particle'
 import { Land, landZ } from './Land'
 import { Sky } from './Sky'
@@ -50,60 +49,10 @@ function updateCamera() {
   camera.position.z = cpos.z
 }
 
-import { generateBouquets, generateGeometry } from './Flower'
-import { createShadowedSakuraTexture } from './sakura'
-import vertexShader from './shaders/flower.vert'
-import fragmentShader from './shaders/flower.frag'
-import treeVertexShader from './shaders/tree.vert'
-import treeFragmentShader from './shaders/tree.frag'
-const texture = new THREE.Texture(createShadowedSakuraTexture(512))
-texture.magFilter = THREE.LinearFilter
-texture.minFilter = THREE.LinearFilter
-texture.format = THREE.RGBFormat
-texture.needsUpdate = true
-const bouquets = generateBouquets(4)
-
-const uniforms = {
-  texture: { value: texture },
-  wind: { value: new THREE.Vector3(0, 0, 0) }
-}
-const material = new THREE.ShaderMaterial({
-  vertexShader,
-  fragmentShader,
-  uniforms,
-  side: THREE.DoubleSide
-})
-const treeMaterial = new THREE.ShaderMaterial({
-  vertexShader: treeVertexShader,
-  fragmentShader: treeFragmentShader,
-  uniforms
-})
-
-bouquets.forEach((levels, i) => {
-  levels.forEach((attrs, j) => {
-    const geometry = generateGeometry(attrs)
-    const mesh = new THREE.Mesh(geometry, material)
-    mesh.position.z = 1
-    mesh.position.x = 2 + i / 5
-    mesh.position.y = j / 5
-    scene.add(mesh)
-  })
-})
-
-import { Branch, Point3D, TreeFlower, TreeBase, Tree } from './Tree'
+import { TreeBase, Forest } from './Tree'
 const treeBases = [...new Array(16)].map(() => new TreeBase())
-const trees: Tree[] = []
-for (let i = 0; i < 256; i++) {
-  const x = 32 * Math.random() - 16
-  const y = 32 * Math.random() - 16
-  const z = landZ(x, y) - 0.1
-  const tree = new Tree(treeBases[Math.floor(treeBases.length * Math.random())], { x, y, z })
-  trees.push(tree)
-}
+const forest = new Forest(treeBases, landZ)
 
-const light = new DirectionalLight(0xffffff, 1)
-const alight = new AmbientLight(0x202020, 1)
-scene.add(light, alight)
 camera.position.z = 2
 renderer.setSize(800, 600)
 let prevKeypad = keypad
@@ -120,14 +69,7 @@ function animate() {
   prevKeypad = { ...keypad }
   timeScale = timeScale * 0.9 + 0.1 * (paused ? 0 : 1)
   time += (prevTime - current) / 1000 * timeScale
-
-  uniforms.wind.value.x = (Math.sin(1.21 * time) - Math.sin(1.33 * time)) / 16
-  uniforms.wind.value.z = (Math.sin(1.57 * time) - Math.sin(1.17 * time)) / 32
-  uniforms.wind.value.y = (Math.sin(1.37 * time) - Math.sin(1.51 * time)) / 16
-  trees.forEach(t => t.update(time, scene, camera))
-  material.needsUpdate = true
-  treeMaterial.needsUpdate = true
-
+  forest.update(time, scene, camera)
   prevTime = current
   updateCamera()
   update(time, scene, camera)
