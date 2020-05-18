@@ -43,6 +43,7 @@ export function sakuraOutlineTriangles(n: number): Triangle2D[] {
 
 export function sakuraTriangles(nRadial: number, nInner: number, nOuter: number = nInner): Triangle2D[] {
   const coords: Point2D[] = sakuraOutline(nOuter)
+  coords.push(coords[0])
   const triangles: Triangle2D[] = []
   let outer = coords
   for (let i = nRadial - 1; i >= 0; i--) {
